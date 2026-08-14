@@ -1,7 +1,8 @@
 {"panels":[
 {"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"00:00","end":"24:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO\nSTOPPING"}},
-{"panel":{"restriction":"noParking","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"00:00","end":"24:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO\nPARKING"}},
+{"panel":{"restriction":"noParking","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"00:00","end":"24:00"},"direction":"left","qualifiers":[],"rawText":"NO\nPARKING ←"}},
 {"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"00:00","end":"24:00"},"direction":"unspecified","qualifiers":[],"rawText":"1\nHOUR\nPARKING"}},
 {"panel":{"restriction":{"timeLimited":30},"days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"00:00","end":"24:00"},"direction":"unspecified","qualifiers":[],"rawText":"30\nMINUTE\nPARKING"}},
-{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":{"start":"09:00","end":"17:00"},"direction":"unspecified","qualifiers":[],"rawText":"1P\n9AM -\n5PM\nMON -\nFRI"}}
+{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":{"start":"09:00","end":"17:00"},"direction":"unspecified","qualifiers":[],"rawText":"1P\n9AM -\n5PM\nMON -\nFRI"}},
+{"unknown":{"rawText":"NO\nWOMBAT","reason":{"unrecognisedLine":"NO"}}}
 ]}
