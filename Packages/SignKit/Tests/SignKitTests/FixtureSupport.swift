@@ -15,6 +15,10 @@ enum Fixtures {
         repositoryRoot.appendingPathComponent("fixtures/parser", isDirectory: true)
     }
 
+    static var evaluatorDirectory: URL {
+        repositoryRoot.appendingPathComponent("fixtures/evaluator", isDirectory: true)
+    }
+
     struct ParserCase {
         var name: String
         var input: String
@@ -40,5 +44,27 @@ enum Fixtures {
             )
             return ParserCase(name: name, input: input, expectedJSON: expected)
         }
+    }
+
+    struct EvaluatorCase {
+        var name: String
+        var json: Data
+    }
+
+    /// Evaluator fixtures are self-contained: sign, instant, time zone, and
+    /// expected evaluation live together so a case cannot be paired wrongly.
+    static func evaluatorCases() throws -> [EvaluatorCase] {
+        try FileManager.default
+            .contentsOfDirectory(atPath: evaluatorDirectory.path)
+            .filter { $0.hasSuffix(".json") }
+            .sorted()
+            .map { filename in
+                EvaluatorCase(
+                    name: String(filename.dropLast(5)),
+                    json: try Data(
+                        contentsOf: evaluatorDirectory.appendingPathComponent(filename)
+                    )
+                )
+            }
     }
 }

@@ -46,6 +46,41 @@ struct EvaluatorTests {
         #expect(result.inactive == weekday.parsedPanels)
     }
 
+    @Test("a caller can inject its own holiday table")
+    func injectedPublicHolidayProvider() throws {
+        let sign = Parser.parse("1P\n9AM - 5PM\nFRI")
+        let instant = try #require(Self.instant("2026-08-14T02:00:00Z"))
+        let holidays = NSWPublicHolidays(
+            dates: [LocalDate(year: 2026, month: 8, day: 14)]
+        )
+
+        let result = Evaluator(publicHolidays: holidays)
+            .evaluate(sign, at: instant, in: sydney)
+
+        #expect(result.active.isEmpty)
+        #expect(result.inactive == sign.parsedPanels)
+    }
+
+    @Test("the NSW table contains statewide holidays but not the bank holiday")
+    func statewideHolidayTable() {
+        let holidays = NSWPublicHolidays.current
+
+        #expect(holidays.isPublicHoliday(.init(year: 2026, month: 1, day: 26)))
+        #expect(holidays.isPublicHoliday(.init(year: 2026, month: 4, day: 27)))
+        #expect(holidays.isPublicHoliday(.init(year: 2027, month: 12, day: 28)))
+        #expect(!holidays.isPublicHoliday(.init(year: 2026, month: 8, day: 3)))
+    }
+
+    @Test("time windows are half open at both exact boundaries")
+    func exactBoundaries() throws {
+        let sign = Parser.parse("1P\n9AM - 5PM")
+        let start = try #require(Self.instant("2026-08-13T23:00:00Z"))
+        let end = try #require(Self.instant("2026-08-14T07:00:00Z"))
+
+        #expect(Evaluator.evaluate(sign, at: start, in: sydney).active.count == 1)
+        #expect(Evaluator.evaluate(sign, at: end, in: sydney).active.isEmpty)
+    }
+
     @Test("all-day every-day panels do not invent a midnight change")
     func continuousPanel() throws {
         let sign = Parser.parse("NO STOPPING")

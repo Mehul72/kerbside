@@ -1,0 +1,12 @@
+{
+  "sign": {"panels":[{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":{"start":"09:00","end":"17:00"},"direction":"unspecified","qualifiers":[],"rawText":"1P\n9AM - 5PM\nMON - FRI"}}]},
+  "instant": "2026-08-14T08:00:00Z",
+  "timeZone": "Australia/Sydney",
+  "expected": {
+    "instant": "2026-08-14T08:00:00Z",
+    "active": [],
+    "inactive": [{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":{"start":"09:00","end":"17:00"},"direction":"unspecified","qualifiers":[],"rawText":"1P\n9AM - 5PM\nMON - FRI"}],
+    "unknowns": [],
+    "nextChange": {"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":{"start":"09:00","end":"17:00"},"direction":"unspecified","qualifiers":[],"rawText":"1P\n9AM - 5PM\nMON - FRI"},"kind":"begins","at":"2026-08-16T23:00:00Z"}
+  }
+}

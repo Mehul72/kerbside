@@ -17,6 +17,20 @@ enum ClockFormat {
     }
 }
 
+enum InstantFormat {
+    static func string(from date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: date)
+    }
+
+    static func date(from text: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: text)
+    }
+}
+
 private struct SingleKey: CodingKey {
     var stringValue: String
     var intValue: Int? { nil }
@@ -266,5 +280,63 @@ extension Sign: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: Keys.self)
         try container.encode(panels, forKey: .panels)
+    }
+}
+
+extension Change: Codable {
+    private enum Keys: String, CodingKey {
+        case panel
+        case kind
+        case at
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Keys.self)
+        panel = try container.decode(Panel.self, forKey: .panel)
+        kind = try container.decode(ChangeKind.self, forKey: .kind)
+        let text = try container.decode(String.self, forKey: .at)
+        guard let date = InstantFormat.date(from: text) else {
+            throw decodingError(decoder, "invalid instant \"\(text)\"")
+        }
+        at = date
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: Keys.self)
+        try container.encode(panel, forKey: .panel)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(InstantFormat.string(from: at), forKey: .at)
+    }
+}
+
+extension Evaluation: Codable {
+    private enum Keys: String, CodingKey {
+        case instant
+        case active
+        case inactive
+        case unknowns
+        case nextChange
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Keys.self)
+        let text = try container.decode(String.self, forKey: .instant)
+        guard let date = InstantFormat.date(from: text) else {
+            throw decodingError(decoder, "invalid instant \"\(text)\"")
+        }
+        instant = date
+        active = try container.decode([Panel].self, forKey: .active)
+        inactive = try container.decode([Panel].self, forKey: .inactive)
+        unknowns = try container.decode([Unknown].self, forKey: .unknowns)
+        nextChange = try container.decodeIfPresent(Change.self, forKey: .nextChange)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: Keys.self)
+        try container.encode(InstantFormat.string(from: instant), forKey: .instant)
+        try container.encode(active, forKey: .active)
+        try container.encode(inactive, forKey: .inactive)
+        try container.encode(unknowns, forKey: .unknowns)
+        try container.encodeIfPresent(nextChange, forKey: .nextChange)
     }
 }

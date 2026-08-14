@@ -1,0 +1,12 @@
+{
+  "sign": {"panels":[{"panel":{"restriction":"noParking","days":{"weekdays":[],"publicHolidays":true},"times":{"start":"09:00","end":"10:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n9AM - 10AM\nPUBLIC HOLIDAYS"}}]},
+  "instant": "2026-01-25T22:30:00Z",
+  "timeZone": "Australia/Sydney",
+  "expected": {
+    "instant": "2026-01-25T22:30:00Z",
+    "active": [{"restriction":"noParking","days":{"weekdays":[],"publicHolidays":true},"times":{"start":"09:00","end":"10:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n9AM - 10AM\nPUBLIC HOLIDAYS"}],
+    "inactive": [],
+    "unknowns": [],
+    "nextChange": {"panel":{"restriction":"noParking","days":{"weekdays":[],"publicHolidays":true},"times":{"start":"09:00","end":"10:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n9AM - 10AM\nPUBLIC HOLIDAYS"},"kind":"ends","at":"2026-01-25T23:00:00Z"}
+  }
+}
