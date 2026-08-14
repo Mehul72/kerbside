@@ -24,8 +24,7 @@ public enum Parser {
         // The first line that defeated the classifier, in sign order.
         var lineFailure: UnknownReason?
 
-        for line in block.lines {
-            let (lineDirections, token) = LineClassifier.classify(line)
+        for (lineDirections, token) in classifyLogicalLines(block.lines) {
             directions.append(contentsOf: lineDirections)
 
             switch token {
@@ -65,6 +64,54 @@ public enum Parser {
                 rawText: block.rawText
             )
         )
+    }
+
+    /// Vision can return a visually wrapped phrase as one observation per
+    /// word. Join at most three adjacent rejected lines when their combined
+    /// text is a complete known token. The classifier remains authoritative:
+    /// arbitrary neighbouring lines are never combined or partially accepted.
+    private static func classifyLogicalLines(
+        _ lines: [String]
+    ) -> [(directions: [Direction], token: LineToken?)] {
+        var result: [(directions: [Direction], token: LineToken?)] = []
+        var index = 0
+
+        while index < lines.count {
+            let direct = LineClassifier.classify(lines[index])
+            guard case .unrecognised = direct.token else {
+                result.append(direct)
+                index += 1
+                continue
+            }
+
+            var combined: (directions: [Direction], token: LineToken?)?
+            var consumed = 1
+            let maximumCount = min(3, lines.count - index)
+            if maximumCount >= 2 {
+                for count in stride(from: maximumCount, through: 2, by: -1) {
+                    let text = lines[index..<(index + count)].joined(separator: " ")
+                    let candidate = LineClassifier.classify(text)
+                    if isCompleteToken(candidate.token) {
+                        combined = candidate
+                        consumed = count
+                        break
+                    }
+                }
+            }
+
+            result.append(combined ?? direct)
+            index += consumed
+        }
+        return result
+    }
+
+    private static func isCompleteToken(_ token: LineToken?) -> Bool {
+        switch token {
+        case .restriction, .timeRange, .daySet, .qualifier, .malformedTimeRange:
+            true
+        case .none, .unrecognised:
+            false
+        }
     }
 
     /// Arrows pointing both ways describe both stretches of kerb. No arrow at
