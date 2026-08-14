@@ -1,3 +1,4 @@
+import PhotosUI
 import SignKit
 import SwiftUI
 import UIKit
@@ -5,6 +6,7 @@ import UIKit
 struct SignView: View {
     @StateObject private var model = SignViewModel()
     @State private var isCameraPresented = false
+    @State private var selectedPhoto: PhotosPickerItem?
 
     private var cameraAvailable: Bool {
         UIImagePickerController.isSourceTypeAvailable(.camera)
@@ -17,10 +19,19 @@ struct SignView: View {
                 .toolbar {
                     if case .result = model.phase {
                         ToolbarItem(placement: .primaryAction) {
-                            Button("Scan again", systemImage: "camera") {
-                                isCameraPresented = true
+                            Menu("Read another sign", systemImage: "plus.viewfinder") {
+                                Button("Take photo", systemImage: "camera") {
+                                    isCameraPresented = true
+                                }
+                                .disabled(!cameraAvailable)
+
+                                PhotosPicker(
+                                    selection: $selectedPhoto,
+                                    matching: .images
+                                ) {
+                                    Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                }
                             }
-                            .disabled(!cameraAvailable)
                         }
                     }
                 }
@@ -30,6 +41,11 @@ struct SignView: View {
                     }
                     .ignoresSafeArea()
                 }
+                .onChange(of: selectedPhoto) { item in
+                    guard let item else { return }
+                    selectedPhoto = nil
+                    model.read(item)
+                }
         }
     }
 
@@ -37,63 +53,126 @@ struct SignView: View {
     private var content: some View {
         switch model.phase {
         case .ready:
-            ReadyView(cameraAvailable: cameraAvailable) {
-                isCameraPresented = true
-            }
+            ReadyView(
+                selectedPhoto: $selectedPhoto,
+                cameraAvailable: cameraAvailable,
+                openCamera: { isCameraPresented = true }
+            )
+        case .loadingPhoto:
+            ProcessingView(
+                title: "Loading photo…",
+                detail: "The selected photograph stays on this device.",
+                cancel: model.reset
+            )
         case .reading:
-            VStack(spacing: 16) {
-                ProgressView()
-                    .controlSize(.large)
-                Text("Reading sign…")
-                    .font(.headline)
-                Text("The photograph stays on this device.")
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .accessibilityElement(children: .combine)
+            ProcessingView(
+                title: "Reading sign…",
+                detail: "The photograph stays on this device.",
+                cancel: model.reset
+            )
         case .result(let evaluation):
             ResultList(evaluation: evaluation)
         case .failed(let message):
-            FailureView(message: message, cameraAvailable: cameraAvailable) {
-                isCameraPresented = true
-            }
+            FailureView(
+                message: message,
+                selectedPhoto: $selectedPhoto,
+                cameraAvailable: cameraAvailable,
+                openCamera: { isCameraPresented = true }
+            )
         }
     }
 }
 
 private struct ReadyView: View {
+    @Binding var selectedPhoto: PhotosPickerItem?
     let cameraAvailable: Bool
     let openCamera: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "camera.viewfinder")
-                .font(.system(size: 54))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 24) {
+                    Image(systemName: "camera.viewfinder")
+                        .font(.system(size: 54))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
 
-            VStack(spacing: 8) {
-                Text("Photograph the whole sign pole")
-                    .font(.title2.bold())
-                Text("Keep every panel in frame and hold the phone steady.")
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-            }
+                    VStack(spacing: 8) {
+                        Text("Read a parking sign")
+                            .font(.title2.bold())
+                        Text("Keep every panel in frame and hold the phone steady.")
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.secondary)
+                    }
 
-            Button("Open camera", systemImage: "camera", action: openCamera)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(!cameraAvailable)
+                    PhotoSourceActions(
+                        selectedPhoto: $selectedPhoto,
+                        cameraAvailable: cameraAvailable,
+                        openCamera: openCamera
+                    )
 
-            if !cameraAvailable {
-                Text("A camera is not available. Run Kerbside on a physical iPhone to scan a sign.")
-                    .font(.footnote)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
+                    if !cameraAvailable {
+                        Text("A camera is not available. You can still choose an existing photo.")
+                            .font(.footnote)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(32)
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height)
             }
         }
-        .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct ProcessingView: View {
+    let title: String
+    let detail: String
+    let cancel: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
+                ProgressView()
+                    .controlSize(.large)
+                Text(title)
+                    .font(.headline)
+                Text(detail)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityElement(children: .combine)
+
+            Button("Cancel", role: .cancel, action: cancel)
+                .buttonStyle(.bordered)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct PhotoSourceActions: View {
+    @Binding var selectedPhoto: PhotosPickerItem?
+    let cameraAvailable: Bool
+    let openCamera: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Button(action: openCamera) {
+                Label("Take photo", systemImage: "camera")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(!cameraAvailable)
+
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                Label("Choose photo", systemImage: "photo.on.rectangle")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+        }
+        .frame(maxWidth: 320)
     }
 }
 
@@ -210,25 +289,33 @@ private struct NextChangeRow: View {
 
 private struct FailureView: View {
     let message: String
+    @Binding var selectedPhoto: PhotosPickerItem?
     let cameraAvailable: Bool
-    let tryAgain: () -> Void
+    let openCamera: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "text.viewfinder")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            Text("Sign not read")
-                .font(.title2.bold())
-            Text(message)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
-            Button("Take another photo", systemImage: "camera", action: tryAgain)
-                .buttonStyle(.borderedProminent)
-                .disabled(!cameraAvailable)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 20) {
+                    Image(systemName: "text.viewfinder")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                    Text("Sign not read")
+                        .font(.title2.bold())
+                    Text(message)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                    PhotoSourceActions(
+                        selectedPhoto: $selectedPhoto,
+                        cameraAvailable: cameraAvailable,
+                        openCamera: openCamera
+                    )
+                }
+                .padding(32)
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+            }
         }
-        .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

@@ -1,13 +1,16 @@
 import Foundation
 import ImageIO
+import PhotosUI
 import SignKit
 import SignVision
+import SwiftUI
 import UIKit
 
 @MainActor
 final class SignViewModel: ObservableObject {
     enum Phase {
         case ready
+        case loadingPhoto
         case reading
         case result(Evaluation)
         case failed(String)
@@ -18,7 +21,9 @@ final class SignViewModel: ObservableObject {
     private let recognizer: SignRecognizer
     private let timeZone: TimeZone
     private var sign: Sign?
+    private var readingTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
+    private var requestID = 0
 
     init(
         recognizer: SignRecognizer = SignRecognizer(),
@@ -29,34 +34,97 @@ final class SignViewModel: ObservableObject {
     }
 
     func read(_ image: UIImage) {
-        guard let cgImage = image.cgImage else {
-            phase = .failed("The camera did not return a readable photograph.")
-            return
+        let requestID = beginRequest(phase: .reading)
+        readingTask = Task { [weak self] in
+            guard let self else { return }
+            await recognize(image, requestID: requestID)
         }
+    }
 
-        refreshTask?.cancel()
-        phase = .reading
-        Task {
+    func read(_ item: PhotosPickerItem) {
+        let requestID = beginRequest(phase: .loadingPhoto)
+        readingTask = Task { [weak self] in
             do {
-                let reading = try await recognizer.read(
-                    cgImage,
-                    orientation: image.imageOrientation.cgImageOrientation
-                )
-                sign = reading.sign
-                refreshEvaluation()
+                guard let data = try await item.loadTransferable(type: Data.self),
+                      let image = UIImage(data: data)
+                else {
+                    self?.failPhotoLoad(requestID: requestID)
+                    return
+                }
+                guard let self, isCurrent(requestID) else { return }
+                phase = .reading
+                await recognize(image, requestID: requestID)
+            } catch is CancellationError {
+                return
             } catch {
-                phase = .failed(
-                    (error as? LocalizedError)?.errorDescription
-                        ?? "The photograph could not be read."
-                )
+                self?.failPhotoLoad(requestID: requestID)
             }
         }
     }
 
     func reset() {
+        requestID &+= 1
+        readingTask?.cancel()
         refreshTask?.cancel()
+        readingTask = nil
         sign = nil
         phase = .ready
+    }
+
+    private func recognize(_ image: UIImage, requestID: Int) async {
+        guard let cgImage = image.cgImage else {
+            fail(
+                "The photograph could not be opened. Choose another photo.",
+                requestID: requestID
+            )
+            return
+        }
+
+        do {
+            let reading = try await recognizer.read(
+                cgImage,
+                orientation: image.imageOrientation.cgImageOrientation
+            )
+            guard isCurrent(requestID) else { return }
+            sign = reading.sign
+            readingTask = nil
+            refreshEvaluation()
+        } catch is CancellationError {
+            return
+        } catch {
+            fail(
+                (error as? LocalizedError)?.errorDescription
+                    ?? "The photograph could not be read.",
+                requestID: requestID
+            )
+        }
+    }
+
+    private func beginRequest(phase: Phase) -> Int {
+        requestID &+= 1
+        readingTask?.cancel()
+        refreshTask?.cancel()
+        readingTask = nil
+        sign = nil
+        self.phase = phase
+        return requestID
+    }
+
+    private func isCurrent(_ requestID: Int) -> Bool {
+        requestID == self.requestID && !Task.isCancelled
+    }
+
+    private func failPhotoLoad(requestID: Int) {
+        fail(
+            "The selected photo could not be opened. Choose another photo.",
+            requestID: requestID
+        )
+    }
+
+    private func fail(_ message: String, requestID: Int) {
+        guard isCurrent(requestID) else { return }
+        readingTask = nil
+        phase = .failed(message)
     }
 
     private func refreshEvaluation() {
