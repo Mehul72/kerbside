@@ -76,7 +76,8 @@ public struct PanelSegmenter: Sendable {
                 rawText: groupLines.map(\.text).joined(separator: "\n"),
                 lines: groupLines,
                 boundingBox: region?.boundingBox ?? lineBounds,
-                colourHint: region?.colourHint ?? .none
+                colourHint: region?.colourHint ?? .none,
+                sourceRegion: region
             )
         }
         blocks.append(
@@ -242,7 +243,8 @@ public struct PanelSegmenter: Sendable {
                 rawText: "",
                 lines: [],
                 boundingBox: region.boundingBox,
-                colourHint: region.colourHint
+                colourHint: region.colourHint,
+                sourceRegion: region
             )
         }
     }

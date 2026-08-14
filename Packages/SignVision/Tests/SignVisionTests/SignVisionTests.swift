@@ -275,8 +275,92 @@ struct PanelSegmenterTests {
         let reading = try await SignRecognizer().read(image)
 
         #expect(reading.blocks.count == 1)
+        #expect(reading.blocks.first?.rawText == "NO\nSTOPPING")
+        #expect(reading.blocks.first?.visualDirection == .left)
         #expect(reading.sign.parsedPanels.map(\.restriction) == [.noStopping])
+        #expect(reading.sign.parsedPanels.map(\.direction) == [.left])
+        #expect(reading.sign.parsedPanels.first?.rawText == "NO\nSTOPPING")
         #expect(reading.sign.unknowns.isEmpty)
+    }
+
+    @Test("a rendered right arrow scopes its panel to the right")
+    func rightArrowRecognition() async throws {
+        let image = try #require(
+            Self.renderedSign(withContents: true, arrow: .right)
+        )
+
+        let reading = try await SignRecognizer().read(image)
+
+        #expect(reading.blocks.count == 1)
+        #expect(reading.sign.parsedPanels.map(\.direction) == [.right])
+        #expect(reading.sign.unknowns.isEmpty)
+    }
+
+    @Test("only one connected double-headed arrow means both sides")
+    func bidirectionalArrowRecognition() async throws {
+        let image = try #require(
+            Self.renderedSign(withContents: true, arrow: .bidirectional)
+        )
+
+        let reading = try await SignRecognizer().read(image)
+
+        #expect(reading.blocks.count == 1)
+        #expect(reading.sign.parsedPanels.map(\.direction) == [.both])
+        #expect(reading.sign.unknowns.isEmpty)
+    }
+
+    @Test("a shaft without an arrowhead leaves direction unspecified")
+    func arrowShaftIsNotDirection() async throws {
+        let image = try #require(
+            Self.renderedSign(withContents: true, arrow: .bar)
+        )
+
+        let reading = try await SignRecognizer().read(image)
+
+        #expect(reading.blocks.count == 1)
+        #expect(reading.sign.parsedPanels.map(\.direction) == [.unspecified])
+    }
+
+    @Test("blunt end caps are not mistaken for arrowheads")
+    func bluntShapesAreNotDirections() async throws {
+        let panelBox = CGRect(
+            x: 0.25,
+            y: 100.0 / 1_300.0,
+            width: 0.5,
+            height: 1_100.0 / 1_300.0
+        )
+        for shape in [ArrowDrawing.cappedLeft, .dumbbell] {
+            let image = try #require(
+                Self.renderedSign(withContents: true, arrow: shape)
+            )
+            let block = PanelBlock(
+                rawText: "NO\nSTOPPING",
+                lines: [],
+                boundingBox: panelBox,
+                colourHint: .red,
+                sourceRegion: PanelRegion(boundingBox: panelBox, colourHint: .red)
+            )
+
+            let annotated = PanelArrowDetector.annotate([block], in: image)
+
+            let reading = try await SignRecognizer().read(image)
+
+            #expect(annotated.first?.visualDirection == nil)
+            #expect(reading.blocks.count == 1)
+            #expect(reading.sign.parsedPanels.map(\.direction) == [.unspecified])
+        }
+    }
+
+    @Test("no graphical arrow remains unspecified")
+    func noArrowRecognition() async throws {
+        let image = try #require(
+            Self.renderedSign(withContents: true, arrow: .none)
+        )
+
+        let reading = try await SignRecognizer().read(image)
+
+        #expect(reading.blocks.count == 1)
+        #expect(reading.sign.parsedPanels.map(\.direction) == [.unspecified])
     }
 
     @Test("a detected panel with no OCR remains an explicit unknown")
@@ -318,10 +402,184 @@ struct PanelSegmenterTests {
 
         let sign = SignVision.assemble(blocks)
 
-        #expect(SignVision.pipelineVersion == 3)
+        #expect(SignVision.pipelineVersion == 4)
         #expect(sign.parsedPanels.count == 1)
         #expect(sign.unknowns.count == 1)
         #expect(sign.unknowns.first?.rawText == "LOADING ZONE")
+    }
+
+    @Test("visual direction fills only missing parsed direction")
+    func visualDirectionPrecedence() {
+        let visual = PanelBlock(
+            rawText: "NO STOPPING",
+            lines: [line("NO STOPPING", y: 0.8)],
+            boundingBox: CGRect(x: 0.1, y: 0.7, width: 0.8, height: 0.2),
+            visualDirection: .left
+        )
+        let textual = PanelBlock(
+            rawText: "NO STOPPING →",
+            lines: [line("NO STOPPING →", y: 0.8)],
+            boundingBox: CGRect(x: 0.1, y: 0.7, width: 0.8, height: 0.2),
+            visualDirection: .left
+        )
+        let unknown = PanelBlock(
+            rawText: "WOMBAT",
+            lines: [line("WOMBAT", y: 0.8)],
+            boundingBox: CGRect(x: 0.1, y: 0.7, width: 0.8, height: 0.2),
+            visualDirection: .left
+        )
+
+        #expect(SignVision.assemble([visual]).parsedPanels.first?.direction == .left)
+        #expect(SignVision.assemble([visual]).parsedPanels.first?.rawText == "NO STOPPING")
+        #expect(SignVision.assemble([textual]).parsedPanels.first?.direction == .right)
+        #expect(SignVision.assemble([unknown]).unknowns.count == 1)
+    }
+
+    @Test("graphical arrows attach to their unique physical panels")
+    func arrowPanelAssociation() throws {
+        let image = try #require(Self.stackedArrowPanels())
+        let topBox = CGRect(x: 0.20, y: 0.57, width: 0.60, height: 0.33)
+        let bottomBox = CGRect(x: 0.20, y: 0.10, width: 0.60, height: 0.33)
+        let blocks = [
+            PanelBlock(
+                rawText: "NO STOPPING",
+                lines: [],
+                boundingBox: topBox,
+                colourHint: .red,
+                sourceRegion: PanelRegion(boundingBox: topBox, colourHint: .red)
+            ),
+            PanelBlock(
+                rawText: "1P",
+                lines: [],
+                boundingBox: bottomBox,
+                colourHint: .red,
+                sourceRegion: PanelRegion(boundingBox: bottomBox, colourHint: .red)
+            ),
+        ]
+
+        let annotated = PanelArrowDetector.annotate(blocks, in: image)
+
+        #expect(annotated.map(\.visualDirection) == [.left, .right])
+    }
+
+    @Test("an arrow owned by overlapping panel faces stays unassigned")
+    func ambiguousArrowOwnership() throws {
+        let image = try #require(
+            Self.stackedArrowPanels(top: .none, bottom: .left)
+        )
+        let wrapperBox = CGRect(x: 0.15, y: 0.05, width: 0.70, height: 0.90)
+        let bottomBox = CGRect(x: 0.20, y: 0.10, width: 0.60, height: 0.33)
+        let blocks = [
+            PanelBlock(
+                rawText: "NO STOPPING",
+                lines: [],
+                boundingBox: wrapperBox,
+                colourHint: .red,
+                sourceRegion: PanelRegion(boundingBox: wrapperBox, colourHint: .red)
+            ),
+            PanelBlock(
+                rawText: "",
+                lines: [],
+                boundingBox: bottomBox,
+                colourHint: .red,
+                sourceRegion: PanelRegion(boundingBox: bottomBox, colourHint: .red)
+            ),
+        ]
+
+        let annotated = PanelArrowDetector.annotate(blocks, in: image)
+
+        #expect(annotated.map(\.visualDirection) == [nil, nil])
+    }
+
+    @Test("separate opposing arrows never imply a bidirectional arrow")
+    func conflictingArrowEvidence() throws {
+        let image = try #require(Self.conflictingArrowPanel())
+        let panelBox = CGRect(x: 0.10, y: 0.10, width: 0.80, height: 0.80)
+        let block = PanelBlock(
+            rawText: "NO STOPPING",
+            lines: [],
+            boundingBox: panelBox,
+            colourHint: .red,
+            sourceRegion: PanelRegion(boundingBox: panelBox, colourHint: .red)
+        )
+
+        let annotated = PanelArrowDetector.annotate([block], in: image)
+
+        #expect(annotated.first?.visualDirection == nil)
+    }
+
+    @Test("an OCR shaft overlapping an arrow does not poison its panel")
+    func arrowShaftOCRCleanup() throws {
+        let image = try #require(
+            Self.stackedArrowPanels(top: .left, bottom: .none)
+        )
+        let panelBox = CGRect(x: 0.20, y: 0.57, width: 0.60, height: 0.33)
+        let lines = [
+            TextObservation(
+                text: "NO",
+                confidence: 0.95,
+                boundingBox: CGRect(x: 0.43, y: 0.85, width: 0.14, height: 0.04)
+            ),
+            TextObservation(
+                text: "STOPPING",
+                confidence: 0.95,
+                boundingBox: CGRect(x: 0.32, y: 0.80, width: 0.36, height: 0.04)
+            ),
+            TextObservation(
+                text: "—",
+                confidence: 0.8,
+                boundingBox: CGRect(x: 0.40, y: 0.715, width: 0.28, height: 0.025)
+            ),
+        ]
+        let block = PanelBlock(
+            rawText: "NO\nSTOPPING\n—",
+            lines: lines,
+            boundingBox: panelBox,
+            colourHint: .red,
+            sourceRegion: PanelRegion(boundingBox: panelBox, colourHint: .red)
+        )
+
+        let annotated = try #require(
+            PanelArrowDetector.annotate([block], in: image).first
+        )
+        let sign = SignVision.assemble([annotated])
+
+        #expect(annotated.rawText == "NO\nSTOPPING\n—")
+        #expect(annotated.lines.map(\.text) == ["NO", "STOPPING", "—"])
+        #expect(sign.parsedPanels.first?.direction == .left)
+        #expect(sign.parsedPanels.first?.rawText == "NO\nSTOPPING\n—")
+        #expect(sign.unknowns.isEmpty)
+    }
+
+    @Test("an arrow-only OCR panel remains an explicit unknown")
+    func arrowOnlyOCRRemainsUnknown() throws {
+        let image = try #require(
+            Self.stackedArrowPanels(top: .left, bottom: .none)
+        )
+        let panelBox = CGRect(x: 0.20, y: 0.57, width: 0.60, height: 0.33)
+        let shaft = TextObservation(
+            text: "—",
+            confidence: 0.8,
+            boundingBox: CGRect(x: 0.40, y: 0.715, width: 0.28, height: 0.025)
+        )
+        let block = PanelBlock(
+            rawText: "—",
+            lines: [shaft],
+            boundingBox: panelBox,
+            colourHint: .red,
+            sourceRegion: PanelRegion(boundingBox: panelBox, colourHint: .red)
+        )
+
+        let annotated = try #require(
+            PanelArrowDetector.annotate([block], in: image).first
+        )
+        let sign = SignVision.assemble([annotated])
+
+        #expect(annotated.rawText == "—")
+        #expect(annotated.lines == [shaft])
+        #expect(sign.panels.count == 1)
+        #expect(sign.parsedPanels.isEmpty)
+        #expect(sign.unknowns.first?.rawText == "—")
     }
 
     @Test("a coloured panel with no readable text becomes an explicit unknown")
@@ -786,6 +1044,36 @@ struct PanelSegmenterTests {
         return context.makeImage()
     }
 
+    private static func stackedArrowPanels(
+        top: ArrowDrawing = .left,
+        bottom: ArrowDrawing = .right
+    ) -> CGImage? {
+        guard let context = drawingContext(width: 400, height: 600) else { return nil }
+        context.setFillColor(CGColor(gray: 0.82, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 400, height: 600))
+        context.setFillColor(CGColor(red: 0.82, green: 0, blue: 0, alpha: 1))
+        context.fill(CGRect(x: 80, y: 340, width: 240, height: 200))
+        context.fill(CGRect(x: 80, y: 60, width: 240, height: 200))
+        drawArrow(top, in: context, frame: CGRect(x: 125, y: 415, width: 150, height: 50))
+        drawArrow(
+            bottom,
+            in: context,
+            frame: CGRect(x: 125, y: 135, width: 150, height: 50)
+        )
+        return context.makeImage()
+    }
+
+    private static func conflictingArrowPanel() -> CGImage? {
+        guard let context = drawingContext(width: 400, height: 400) else { return nil }
+        context.setFillColor(CGColor(gray: 0.82, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 400, height: 400))
+        context.setFillColor(CGColor(red: 0.82, green: 0, blue: 0, alpha: 1))
+        context.fill(CGRect(x: 40, y: 40, width: 320, height: 320))
+        drawArrow(.left, in: context, frame: CGRect(x: 100, y: 225, width: 200, height: 55))
+        drawArrow(.right, in: context, frame: CGRect(x: 100, y: 120, width: 200, height: 55))
+        return context.makeImage()
+    }
+
     private static func twoColourImage() -> CGImage? {
         guard let context = CGContext(
             data: nil,
@@ -803,7 +1091,20 @@ struct PanelSegmenterTests {
         return context.makeImage()
     }
 
-    private static func renderedSign(withContents: Bool) -> CGImage? {
+    private enum ArrowDrawing {
+        case left
+        case right
+        case bidirectional
+        case bar
+        case cappedLeft
+        case dumbbell
+        case none
+    }
+
+    private static func renderedSign(
+        withContents: Bool,
+        arrow: ArrowDrawing = .left
+    ) -> CGImage? {
         let width = 1_000
         let height = 1_300
         guard let context = CGContext(
@@ -830,15 +1131,145 @@ struct PanelSegmenterTests {
         draw("NO", size: 150, baseline: 920, in: context, canvasWidth: CGFloat(width))
         draw("STOPPING", size: 90, baseline: 750, in: context, canvasWidth: CGFloat(width))
 
+        drawArrow(
+            arrow,
+            in: context,
+            frame: CGRect(x: 320, y: 235, width: 360, height: 124)
+        )
+        return context.makeImage()
+    }
+
+    private static func drawArrow(
+        _ arrow: ArrowDrawing,
+        in context: CGContext,
+        frame: CGRect
+    ) {
+        guard arrow != .none else { return }
         context.setFillColor(CGColor(gray: 1, alpha: 1))
-        context.fill(CGRect(x: 385, y: 280, width: 250, height: 34))
+        let headWidth = frame.width * 0.25
+        let shaftHeight = frame.height * 0.27
+        let shaftY = frame.midY - shaftHeight / 2
+
+        switch arrow {
+        case .left:
+            context.fill(
+                CGRect(
+                    x: frame.minX + headWidth * 0.82,
+                    y: shaftY,
+                    width: frame.width - headWidth * 0.82,
+                    height: shaftHeight
+                )
+            )
+            drawHead(
+                tipX: frame.minX,
+                baseX: frame.minX + headWidth,
+                frame: frame,
+                in: context
+            )
+        case .right:
+            context.fill(
+                CGRect(
+                    x: frame.minX,
+                    y: shaftY,
+                    width: frame.width - headWidth * 0.82,
+                    height: shaftHeight
+                )
+            )
+            drawHead(
+                tipX: frame.maxX,
+                baseX: frame.maxX - headWidth,
+                frame: frame,
+                in: context
+            )
+        case .bidirectional:
+            context.fill(
+                CGRect(
+                    x: frame.minX + headWidth * 0.82,
+                    y: shaftY,
+                    width: frame.width - headWidth * 1.64,
+                    height: shaftHeight
+                )
+            )
+            drawHead(
+                tipX: frame.minX,
+                baseX: frame.minX + headWidth,
+                frame: frame,
+                in: context
+            )
+            drawHead(
+                tipX: frame.maxX,
+                baseX: frame.maxX - headWidth,
+                frame: frame,
+                in: context
+            )
+        case .bar:
+            context.fill(
+                CGRect(
+                    x: frame.minX,
+                    y: shaftY,
+                    width: frame.width,
+                    height: shaftHeight
+                )
+            )
+        case .cappedLeft:
+            context.fill(
+                CGRect(
+                    x: frame.minX,
+                    y: frame.minY,
+                    width: frame.width * 0.25,
+                    height: frame.height
+                )
+            )
+            context.fill(
+                CGRect(
+                    x: frame.minX,
+                    y: frame.midY - frame.height / 12,
+                    width: frame.width,
+                    height: frame.height / 6
+                )
+            )
+        case .dumbbell:
+            context.fill(
+                CGRect(
+                    x: frame.minX,
+                    y: frame.minY,
+                    width: frame.width * 0.20,
+                    height: frame.height
+                )
+            )
+            context.fill(
+                CGRect(
+                    x: frame.maxX - frame.width * 0.20,
+                    y: frame.minY,
+                    width: frame.width * 0.20,
+                    height: frame.height
+                )
+            )
+            context.fill(
+                CGRect(
+                    x: frame.minX,
+                    y: frame.midY - frame.height / 12,
+                    width: frame.width,
+                    height: frame.height / 6
+                )
+            )
+        case .none:
+            break
+        }
+    }
+
+    private static func drawHead(
+        tipX: CGFloat,
+        baseX: CGFloat,
+        frame: CGRect,
+        in context: CGContext
+    ) {
         context.beginPath()
-        context.move(to: CGPoint(x: 320, y: 297))
-        context.addLine(to: CGPoint(x: 410, y: 235))
-        context.addLine(to: CGPoint(x: 410, y: 359))
+        context.move(to: CGPoint(x: tipX, y: frame.midY))
+        context.addLine(to: CGPoint(x: baseX, y: frame.minY))
+        context.addLine(to: CGPoint(x: baseX, y: frame.maxY))
         context.closePath()
         context.fillPath()
-        return context.makeImage()
     }
 
     private static func draw(

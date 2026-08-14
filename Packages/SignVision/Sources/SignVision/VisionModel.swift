@@ -24,6 +24,16 @@ public enum PanelColourHint: String, Hashable, Sendable, Codable {
     case none
 }
 
+/// A direction read from one graphical arrow rather than OCR text.
+///
+/// There is deliberately no unknown case: absence or ambiguity is represented
+/// by no observation, and two opposing detections are never widened to both.
+public enum VisualDirection: String, Hashable, Sendable {
+    case left
+    case right
+    case bidirectional
+}
+
 /// Quantitative image evidence retained alongside a rectangle.
 ///
 /// A real coloured face or outline reaches all four edges of its rectangle and
@@ -106,17 +116,25 @@ public struct PanelBlock: Hashable, Sendable {
     public var lines: [TextObservation]
     public var boundingBox: CGRect
     public var colourHint: PanelColourHint
+    public var sourceRegion: PanelRegion?
+    public var visualDirection: VisualDirection?
+    var parserTextOverride: String?
 
     public init(
         rawText: String,
         lines: [TextObservation],
         boundingBox: CGRect,
-        colourHint: PanelColourHint = .none
+        colourHint: PanelColourHint = .none,
+        sourceRegion: PanelRegion? = nil,
+        visualDirection: VisualDirection? = nil
     ) {
         self.rawText = rawText
         self.lines = lines
         self.boundingBox = boundingBox
         self.colourHint = colourHint
+        self.sourceRegion = sourceRegion
+        self.visualDirection = visualDirection
+        parserTextOverride = nil
     }
 }
 
