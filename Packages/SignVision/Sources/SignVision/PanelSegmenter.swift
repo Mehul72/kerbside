@@ -23,7 +23,11 @@ public struct PanelSegmenter: Sendable {
             .filter { $0.confidence >= 0.25 && !$0.boundingBox.isEmpty }
             .sorted(by: regionComesFirst)
         guard !lines.isEmpty else {
-            return unreadableBlocks(in: canonicalRegions, excludingLines: [])
+            return unreadableBlocks(
+                in: canonicalRegions,
+                excludingLines: [],
+                claimedRegionIndices: []
+            )
         }
         let medianHeight = median(lines.map { $0.boundingBox.height })
 
@@ -38,6 +42,7 @@ public struct PanelSegmenter: Sendable {
                 regionIndex: bestRegion(for: line, in: canonicalRegions)
             )
         }
+        let claimedRegionIndices = Set(assigned.compactMap(\.regionIndex))
 
         var groups: [[AssignedLine]] = []
         var current: [AssignedLine] = []
@@ -74,7 +79,13 @@ public struct PanelSegmenter: Sendable {
                 colourHint: region?.colourHint ?? .none
             )
         }
-        blocks.append(contentsOf: unreadableBlocks(in: canonicalRegions, excludingLines: lines))
+        blocks.append(
+            contentsOf: unreadableBlocks(
+                in: canonicalRegions,
+                excludingLines: lines,
+                claimedRegionIndices: claimedRegionIndices
+            )
+        )
         return blocks.sorted(by: blockComesFirst)
     }
 
@@ -101,17 +112,68 @@ public struct PanelSegmenter: Sendable {
         }
         guard !candidates.isEmpty else { return nil }
 
-        // On a red or green sign, Vision often finds both the sign face and
-        // internal rectangles around words or arrows. Prefer the enclosing
-        // coloured face so every line receives one physical-panel identity.
-        // Near-whole-image rectangles are excluded as background wrappers.
+        // Rectangles cut from one solid face share a connected-colour ID even
+        // when Vision finds separate boxes around each word or arrow. Resolve
+        // that component to one stable representative before grouping lines.
+        let componentCandidates = Dictionary(grouping: candidates) { index in
+            regions[index].colourEvidence.componentID
+        }
+        .compactMap { componentID, members -> (
+            id: Int,
+            members: [Int],
+            minimumArea: CGFloat,
+            score: Float
+        )? in
+            guard let componentID else { return nil }
+            let strongMembers = members.filter {
+                regions[$0].colourEvidence.supportsStandalonePanel
+            }
+            guard !strongMembers.isEmpty else { return nil }
+            let minimumArea = strongMembers.map {
+                area(regions[$0].boundingBox)
+            }.min() ?? 0
+            let score = strongMembers.map {
+                regions[$0].colourEvidence.standaloneScore
+            }.max() ?? 0
+            return (componentID, strongMembers, minimumArea, score)
+        }
+        .sorted { lhs, rhs in
+            if lhs.minimumArea != rhs.minimumArea {
+                return lhs.minimumArea < rhs.minimumArea
+            }
+            if lhs.score != rhs.score { return lhs.score > rhs.score }
+            return lhs.id < rhs.id
+        }
+        if let component = componentCandidates.first {
+            return component.members
+                .sorted { lhs, rhs in
+                    let lhsArea = area(regions[lhs].boundingBox)
+                    let rhsArea = area(regions[rhs].boundingBox)
+                    if lhsArea != rhsArea { return lhsArea < rhsArea }
+                    let lhsScore = regions[lhs].colourEvidence.standaloneScore
+                    let rhsScore = regions[rhs].colourEvidence.standaloneScore
+                    if lhsScore != rhsScore { return lhsScore > rhsScore }
+                    return lhs < rhs
+                }
+                .first
+        }
+
+        // Only boundary-backed colour evidence is allowed to establish a
+        // physical face. A broad wrapper or an internal arrow may contain red
+        // or green pixels, but it does not have a separate four-edge boundary.
         let colouredFaces = candidates.filter { index in
             regions[index].colourHint != .none
-                && area(regions[index].boundingBox) <= 0.65
+                && regions[index].colourEvidence.supportsStandalonePanel
         }
-        if let face = colouredFaces.max(by: {
-            area(regions[$0].boundingBox) < area(regions[$1].boundingBox)
-        }) {
+        if let face = colouredFaces.sorted(by: { lhs, rhs in
+            let lhsScore = regions[lhs].colourEvidence.standaloneScore
+            let rhsScore = regions[rhs].colourEvidence.standaloneScore
+            if lhsScore != rhsScore { return lhsScore > rhsScore }
+            let lhsArea = area(regions[lhs].boundingBox)
+            let rhsArea = area(regions[rhs].boundingBox)
+            if lhsArea != rhsArea { return lhsArea < rhsArea }
+            return lhs < rhs
+        }).first {
             return face
         }
 
@@ -151,35 +213,31 @@ public struct PanelSegmenter: Sendable {
     }
 
     /// A coloured sign rectangle with no OCR line is still a panel result.
-    /// Decorative rectangles inside a text-bearing panel are ignored, and an
-    /// unreadable nest keeps its outer panel rather than each inner shape.
+    /// Vision often returns shifted, partly overlapping rectangles for one
+    /// face, border, word, or arrow, so exact containment is not sufficient.
     private func unreadableBlocks(
         in regions: [PanelRegion],
-        excludingLines lines: [TextObservation]
+        excludingLines lines: [TextObservation],
+        claimedRegionIndices: Set<Int>
     ) -> [PanelBlock] {
-        let textBearingRegions = Set(regions.indices.filter { index in
-            lines.contains { line in contains(line, in: regions[index].boundingBox) }
+        let regionsWithText = Set(regions.indices.filter { index in
+            lines.contains { line in intersects(line, regions[index].boundingBox) }
         })
 
-        return regions.indices.compactMap { index -> PanelBlock? in
-            let region = regions[index]
-            guard region.colourHint != .none else { return nil }
-            guard !textBearingRegions.contains(index) else { return nil }
-
-            let isInsideTextBearingPanel = textBearingRegions.contains { parentIndex in
-                encloses(regions[parentIndex].boundingBox, region.boundingBox)
-            }
-            guard !isInsideTextBearingPanel else { return nil }
-
-            let isInsideLargerUnreadableRegion = regions.indices.contains { otherIndex in
-                guard otherIndex != index, regions[otherIndex].colourHint != .none else {
+        let candidates = regions.indices.filter { index in
+            guard regions[index].colourHint != .none else { return false }
+            guard regions[index].colourEvidence.supportsStandalonePanel else { return false }
+            guard !regionsWithText.contains(index) else { return false }
+            return !claimedRegionIndices.contains { claimedIndex in
+                guard regions[claimedIndex].colourEvidence.supportsStandalonePanel else {
                     return false
                 }
-                guard !textBearingRegions.contains(otherIndex) else { return false }
-                return area(regions[otherIndex].boundingBox) > area(region.boundingBox) * 1.1
-                    && encloses(regions[otherIndex].boundingBox, region.boundingBox)
+                return representsSamePanel(regions[index], regions[claimedIndex])
             }
-            guard !isInsideLargerUnreadableRegion else { return nil }
+        }
+
+        return deduplicatedCandidates(candidates, in: regions).map { index in
+            let region = regions[index]
             return PanelBlock(
                 rawText: "",
                 lines: [],
@@ -189,14 +247,102 @@ public struct PanelSegmenter: Sendable {
         }
     }
 
+    /// Builds overlap clusters from smaller rectangles first. A later wrapper
+    /// that bridges multiple existing clusters is ignored rather than merging
+    /// two genuine panels into one.
+    private func deduplicatedCandidates(
+        _ candidates: [Int],
+        in regions: [PanelRegion]
+    ) -> [Int] {
+        let ordered = candidates.sorted { lhs, rhs in
+            let lhsArea = area(regions[lhs].boundingBox)
+            let rhsArea = area(regions[rhs].boundingBox)
+            if lhsArea != rhsArea { return lhsArea < rhsArea }
+            return lhs < rhs
+        }
+        var clusters: [[Int]] = []
+
+        for candidate in ordered {
+            let matchingClusters = clusters.indices.filter { clusterIndex in
+                clusters[clusterIndex].contains { member in
+                    representsSamePanel(regions[candidate], regions[member])
+                }
+            }
+
+            if matchingClusters.isEmpty {
+                clusters.append([candidate])
+            } else if matchingClusters.count == 1,
+                      let clusterIndex = matchingClusters.first {
+                clusters[clusterIndex].append(candidate)
+            }
+        }
+
+        return clusters.compactMap { cluster in
+            cluster.sorted { lhs, rhs in
+                let lhsScore = regions[lhs].colourEvidence.standaloneScore
+                let rhsScore = regions[rhs].colourEvidence.standaloneScore
+                if lhsScore != rhsScore { return lhsScore > rhsScore }
+                if regions[lhs].confidence != regions[rhs].confidence {
+                    return regions[lhs].confidence > regions[rhs].confidence
+                }
+                let lhsArea = area(regions[lhs].boundingBox)
+                let rhsArea = area(regions[rhs].boundingBox)
+                if lhsArea != rhsArea { return lhsArea > rhsArea }
+                return lhs < rhs
+            }.first
+        }
+        .sorted { regionComesFirst(regions[$0], regions[$1]) }
+    }
+
+    private func representsSamePanel(_ lhs: PanelRegion, _ rhs: PanelRegion) -> Bool {
+        if lhs.colourEvidence.supportsStandalonePanel,
+           rhs.colourEvidence.supportsStandalonePanel,
+           lhs.colourEvidence.componentID != nil,
+           rhs.colourEvidence.componentID != nil {
+            return intersectionOverUnion(lhs.boundingBox, rhs.boundingBox) >= 0.6
+        }
+
+        if stronglyOverlaps(lhs.boundingBox, rhs.boundingBox) { return true }
+
+        guard lhs.colourEvidence.componentID == rhs.colourEvidence.componentID,
+              lhs.colourEvidence.componentID != nil
+        else { return false }
+
+        // A shared component can absorb a weak internal observation, but two
+        // independently bounded faces remain distinct even when downsampling
+        // joins them with a one-pixel colour bridge.
+        return !lhs.colourEvidence.supportsStandalonePanel
+            || !rhs.colourEvidence.supportsStandalonePanel
+    }
+
+    private func stronglyOverlaps(_ lhs: CGRect, _ rhs: CGRect) -> Bool {
+        let intersection = lhs.intersection(rhs)
+        guard !intersection.isNull, !intersection.isEmpty else { return false }
+        let smallerArea = min(area(lhs), area(rhs))
+        guard smallerArea > 0 else { return false }
+        return area(intersection) / smallerArea >= 0.7
+    }
+
+    private func intersectionOverUnion(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+        let intersection = lhs.intersection(rhs)
+        guard !intersection.isNull, !intersection.isEmpty else { return 0 }
+        let unionArea = area(lhs) + area(rhs) - area(intersection)
+        guard unionArea > 0 else { return 0 }
+        return area(intersection) / unionArea
+    }
+
     private func contains(_ line: TextObservation, in region: CGRect) -> Bool {
         region.insetBy(dx: -0.015, dy: -0.015).contains(
             CGPoint(x: line.boundingBox.midX, y: line.boundingBox.midY)
         )
     }
 
-    private func encloses(_ outer: CGRect, _ inner: CGRect) -> Bool {
-        outer.insetBy(dx: -0.015, dy: -0.015).contains(inner)
+    private func intersects(_ line: TextObservation, _ region: CGRect) -> Bool {
+        if contains(line, in: region) { return true }
+        let intersection = line.boundingBox.intersection(region)
+        guard !intersection.isNull, !intersection.isEmpty else { return false }
+        let lineArea = area(line.boundingBox)
+        return lineArea > 0 && area(intersection) / lineArea >= 0.25
     }
 
     private func blockComesFirst(_ lhs: PanelBlock, _ rhs: PanelBlock) -> Bool {

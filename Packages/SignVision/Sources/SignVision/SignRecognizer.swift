@@ -76,11 +76,12 @@ public struct SignRecognizer: Sendable {
         }
 
         let rectangles = (rectangleRequest.results ?? []).map(\.boundingBox)
-        let colourHints = PanelColourSampler.hints(for: rectangles, in: prepared)
-        let regions = zip(rectangleRequest.results ?? [], colourHints).map { rectangle, colour in
+        let colourSamples = PanelColourSampler.samples(for: rectangles, in: prepared)
+        let regions = zip(rectangleRequest.results ?? [], colourSamples).map { rectangle, sample in
             PanelRegion(
                 boundingBox: rectangle.boundingBox,
-                colourHint: colour,
+                colourHint: sample.hint,
+                colourEvidence: sample.evidence,
                 confidence: rectangle.confidence
             )
         }

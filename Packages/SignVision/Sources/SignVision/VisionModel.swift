@@ -24,19 +24,78 @@ public enum PanelColourHint: String, Hashable, Sendable, Codable {
     case none
 }
 
+/// Quantitative image evidence retained alongside a rectangle.
+///
+/// A real coloured face or outline reaches all four edges of its rectangle and
+/// is separated from the same connected colour outside it. A word, arrow, tree
+/// branch, or rectangle that merely crosses a sign does not provide that same
+/// boundary evidence.
+public struct PanelColourEvidence: Hashable, Sendable {
+    public var insideCoverage: Float
+    public var outsideCoverage: Float
+    public var perimeterCoverage: Float
+    public var componentShare: Float
+    public var componentID: Int?
+    public var standaloneScore: Float
+
+    public init(
+        insideCoverage: Float,
+        outsideCoverage: Float,
+        perimeterCoverage: Float,
+        componentShare: Float,
+        componentID: Int?,
+        standaloneScore: Float
+    ) {
+        self.insideCoverage = insideCoverage
+        self.outsideCoverage = outsideCoverage
+        self.perimeterCoverage = perimeterCoverage
+        self.componentShare = componentShare
+        self.componentID = componentID
+        self.standaloneScore = standaloneScore
+    }
+
+    public var supportsStandalonePanel: Bool {
+        standaloneScore > 0
+    }
+
+    public static let none = PanelColourEvidence(
+        insideCoverage: 0,
+        outsideCoverage: 0,
+        perimeterCoverage: 0,
+        componentShare: 0,
+        componentID: nil,
+        standaloneScore: 0
+    )
+
+    static func assumed(for hint: PanelColourHint) -> PanelColourEvidence {
+        guard hint != .none else { return .none }
+        return PanelColourEvidence(
+            insideCoverage: 1,
+            outsideCoverage: 0,
+            perimeterCoverage: 1,
+            componentShare: 1,
+            componentID: nil,
+            standaloneScore: 1
+        )
+    }
+}
+
 /// A rectangular sign-like region found in the photograph.
 public struct PanelRegion: Hashable, Sendable {
     public var boundingBox: CGRect
     public var colourHint: PanelColourHint
+    public var colourEvidence: PanelColourEvidence
     public var confidence: Float
 
     public init(
         boundingBox: CGRect,
         colourHint: PanelColourHint = .none,
+        colourEvidence: PanelColourEvidence? = nil,
         confidence: Float = 1
     ) {
         self.boundingBox = boundingBox
         self.colourHint = colourHint
+        self.colourEvidence = colourEvidence ?? .assumed(for: colourHint)
         self.confidence = confidence
     }
 }
