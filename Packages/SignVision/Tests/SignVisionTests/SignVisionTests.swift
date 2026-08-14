@@ -1,4 +1,6 @@
 import CoreGraphics
+import CoreText
+import Foundation
 import SignKit
 import Testing
 
@@ -81,6 +83,16 @@ struct PanelSegmenterTests {
 
         #expect(prepared.width == 50)
         #expect(prepared.height == 100)
+    }
+
+    @Test("the on-device Vision request reads a rendered restriction")
+    func textRecognition() async throws {
+        let image = try #require(Self.renderedSign())
+
+        let reading = try await SignRecognizer().read(image)
+
+        #expect(reading.blocks.contains { $0.rawText.contains("NO STOPPING") })
+        #expect(reading.sign.parsedPanels.contains { $0.restriction == .noStopping })
     }
 
     @Test("low-confidence and empty observations are omitted")
@@ -178,6 +190,41 @@ struct PanelSegmenterTests {
         context.fill(CGRect(x: 0, y: 0, width: 100, height: 50))
         context.setFillColor(CGColor(red: 0.9, green: 0, blue: 0, alpha: 1))
         context.fill(CGRect(x: 0, y: 50, width: 100, height: 50))
+        return context.makeImage()
+    }
+
+    private static func renderedSign() -> CGImage? {
+        let width = 1_000
+        let height = 500
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        context.setStrokeColor(CGColor(red: 0.85, green: 0, blue: 0, alpha: 1))
+        context.setLineWidth(14)
+        context.stroke(CGRect(x: 35, y: 35, width: 930, height: 430))
+
+        let font = CTFontCreateWithName("Helvetica-Bold" as CFString, 112, nil)
+        let text = NSAttributedString(
+            string: "NO STOPPING",
+            attributes: [
+                NSAttributedString.Key(kCTFontAttributeName as String): font,
+                NSAttributedString.Key(kCTForegroundColorAttributeName as String):
+                    CGColor(gray: 0, alpha: 1),
+            ]
+        )
+        let line = CTLineCreateWithAttributedString(text)
+        context.textMatrix = .identity
+        context.textPosition = CGPoint(x: 110, y: 200)
+        CTLineDraw(line, context)
         return context.makeImage()
     }
 }
