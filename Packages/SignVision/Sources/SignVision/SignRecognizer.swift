@@ -95,6 +95,7 @@ public struct SignRecognizer: Sendable {
         return SignReading(
             sign: SignVision.assemble(blocks),
             blocks: blocks,
+            regions: regions,
             pipelineVersion: SignVision.pipelineVersion
         )
     }

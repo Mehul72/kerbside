@@ -69,6 +69,22 @@ func report(_ reading: SignReading) {
     print("pipeline v\(reading.pipelineVersion), \(reading.blocks.count) block(s)")
     print("")
 
+    // Arrow detection only searches inside a region whose colour is trusted,
+    // so an empty or colourless list here is the reason no arrow was found.
+    print("Candidate sign faces (\(reading.regions.count))")
+    if reading.regions.isEmpty {
+        print("  none. no arrow can be found without one.")
+    }
+    for (index, region) in reading.regions.enumerated() {
+        let trusted = region.colourEvidence.supportsStandalonePanel
+            && (region.colourHint == .red || region.colourHint == .green)
+        print("  \(index + 1). colour \(region.colourHint.rawValue)  "
+            + "standalone \(region.colourEvidence.supportsStandalonePanel)  "
+            + "searched for arrows: \(trusted ? "yes" : "no")")
+        print("     \(format(region.boundingBox))")
+    }
+    print("")
+
     for (index, block) in reading.blocks.enumerated() {
         print("Block \(index + 1)")
         print("  colour           \(block.colourHint.rawValue)")

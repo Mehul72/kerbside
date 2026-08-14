@@ -142,11 +142,21 @@ public struct PanelBlock: Hashable, Sendable {
 public struct SignReading: Hashable, Sendable {
     public var sign: Sign
     public var blocks: [PanelBlock]
+    /// Every candidate sign face the rectangle pass proposed, kept whether or
+    /// not a block used it. Arrow detection is gated on these, so when no
+    /// arrow is found this is the evidence that says why.
+    public var regions: [PanelRegion]
     public var pipelineVersion: Int
 
-    public init(sign: Sign, blocks: [PanelBlock], pipelineVersion: Int) {
+    public init(
+        sign: Sign,
+        blocks: [PanelBlock],
+        regions: [PanelRegion] = [],
+        pipelineVersion: Int
+    ) {
         self.sign = sign
         self.blocks = blocks
+        self.regions = regions
         self.pipelineVersion = pipelineVersion
     }
 }
