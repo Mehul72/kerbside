@@ -1,10 +1,10 @@
 {
-  "sign": {"panels":[{"unknown":{"rawText":"LOADING ZONE","reason":{"unrecognisedLine":"LOADING ZONE"}}},{"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"00:00","end":"24:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO STOPPING"}}]},
+  "sign": {"panels":[{"unknown":{"rawText":"LOADING ZONE","reason":{"unrecognisedLine":"LOADING ZONE"}}},{"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":[{"start":"00:00","end":"24:00"}],"direction":"unspecified","qualifiers":[],"rawText":"NO STOPPING"}}]},
   "instant": "2026-08-14T02:00:00Z",
   "timeZone": "Australia/Sydney",
   "expected": {
     "instant": "2026-08-14T02:00:00Z",
-    "active": [{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"00:00","end":"24:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO STOPPING"}],
+    "active": [{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":[{"start":"00:00","end":"24:00"}],"direction":"unspecified","qualifiers":[],"rawText":"NO STOPPING"}],
     "inactive": [],
     "unknowns": [{"rawText":"LOADING ZONE","reason":{"unrecognisedLine":"LOADING ZONE"}}]
   }

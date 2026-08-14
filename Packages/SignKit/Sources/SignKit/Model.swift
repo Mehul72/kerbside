@@ -76,6 +76,37 @@ public struct TimeRange: Hashable, Sendable {
     }
 }
 
+/// The hours a panel applies, as one or more windows within a day.
+///
+/// Peak hour signs routinely name two, written either on one line as
+/// `6AM - 10AM & 3PM - 6PM` or stacked on two. They are one panel with one
+/// restriction, so they are held together rather than split into panels that
+/// the sign does not have.
+public struct TimeWindows: Hashable, Sendable {
+    public let ranges: [TimeRange]
+
+    /// Canonical form: deduplicated and ordered, so two spellings of the same
+    /// hours cannot produce two different values. A panel that names no hours
+    /// applies at all times.
+    public init(_ ranges: [TimeRange]) {
+        var seen = Set<TimeRange>()
+        var kept: [TimeRange] = []
+        for range in ranges where seen.insert(range).inserted {
+            kept.append(range)
+        }
+        kept.sort { $0.start != $1.start ? $0.start < $1.start : $0.end < $1.end }
+        self.ranges = kept.isEmpty ? [.allDay] : kept
+    }
+
+    public static let allDay = TimeWindows([.allDay])
+
+    public var isAllDay: Bool { ranges == [.allDay] }
+
+    public func contains(minutesFromMidnight minute: Int) -> Bool {
+        ranges.contains { $0.contains(minutesFromMidnight: minute) }
+    }
+}
+
 /// What a panel restricts. Zone types such as loading and bus zones are not in
 /// this set yet, so a panel carrying one fails to parse rather than being
 /// approximated by a neighbouring case.

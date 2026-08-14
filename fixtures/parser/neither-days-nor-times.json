@@ -1,1 +1,1 @@
-{"panels":[{"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"00:00","end":"24:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO STOPPING"}}]}
+{"panels":[{"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":[{"start":"00:00","end":"24:00"}],"direction":"unspecified","qualifiers":[],"rawText":"NO STOPPING"}}]}

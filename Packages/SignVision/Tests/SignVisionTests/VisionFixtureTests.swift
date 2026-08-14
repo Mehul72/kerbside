@@ -15,7 +15,7 @@ import Testing
 struct ExpectedPanel: Codable, Hashable {
     var restriction: Restriction
     var days: DaySet
-    var times: TimeRange
+    var times: TimeWindows
     var direction: Direction
     var qualifiers: [Qualifier]
 

@@ -75,9 +75,11 @@ public enum Wording {
         return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]
     }
 
-    public static func describe(_ times: TimeRange) -> String {
-        if times == .allDay { return "at all times" }
-        return "\(clock(times.start)) to \(clock(times.end))"
+    public static func describe(_ times: TimeWindows) -> String {
+        if times.isAllDay { return "at all times" }
+        let windows = times.ranges.map { "\(clock($0.start)) to \(clock($0.end))" }
+        guard let last = windows.last, windows.count > 1 else { return windows[0] }
+        return windows.dropLast().joined(separator: ", ") + " and " + last
     }
 
     static func clock(_ minutes: Int) -> String {
@@ -121,8 +123,6 @@ public enum Wording {
             "This time range does not describe a window: \(line)"
         case .conflictingRestrictions:
             "This panel named more than one restriction."
-        case .conflictingTimeRanges:
-            "This panel named more than one time range."
         case .conflictingDaySets:
             "This panel named more than one set of days."
         }

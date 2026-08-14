@@ -3,7 +3,8 @@ import Foundation
 /// What one line of a panel turned out to be.
 enum LineToken: Hashable {
     case restriction(Restriction)
-    case timeRange(TimeRange)
+    /// One line may name several windows, as `6AM - 10AM & 3PM - 6PM` does.
+    case timeRanges([TimeRange])
     case daySet(DaySet)
     case qualifier(Qualifier)
     case malformedTimeRange(String)
@@ -37,7 +38,7 @@ enum LineClassifier {
             return (directions, .restriction(restriction))
         }
         switch parseTimeRange(text) {
-        case .range(let range): return (directions, .timeRange(range))
+        case .ranges(let ranges): return (directions, .timeRanges(ranges))
         case .malformed: return (directions, .malformedTimeRange(text))
         case .notATimeRange: break
         }
@@ -103,7 +104,7 @@ enum LineClassifier {
     // MARK: times
 
     enum TimeRangeParse {
-        case range(TimeRange)
+        case ranges([TimeRange])
         /// Recognisably a time range, but not a usable one.
         case malformed
         case notATimeRange
@@ -111,8 +112,33 @@ enum LineClassifier {
 
     static func parseTimeRange(_ text: String) -> TimeRangeParse {
         if text == "ALL TIMES" || text == "AT ALL TIMES" || text == "ALL HOURS" {
-            return .range(.allDay)
+            return .ranges([.allDay])
         }
+
+        var ranges: [TimeRange] = []
+        var sawMalformed = false
+        for window in splitWindows(text) {
+            switch parseSingleRange(window) {
+            case .ranges(let parsed): ranges.append(contentsOf: parsed)
+            case .malformed: sawMalformed = true
+            // One unreadable window makes the whole line unreadable. Keeping
+            // the half that parsed would silently shrink the restriction.
+            case .notATimeRange: return .notATimeRange
+            }
+        }
+        if sawMalformed { return .malformed }
+        return ranges.isEmpty ? .notATimeRange : .ranges(ranges)
+    }
+
+    /// A peak hour panel writes its second window after an ampersand or "AND".
+    private static func splitWindows(_ text: String) -> [String] {
+        text.replacingOccurrences(of: " AND ", with: "&")
+            .split(separator: "&")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    private static func parseSingleRange(_ text: String) -> TimeRangeParse {
         let parts = text.split(separator: "-", omittingEmptySubsequences: false)
         guard parts.count == 2 else { return .notATimeRange }
 
@@ -123,7 +149,7 @@ enum LineClassifier {
         else { return .notATimeRange }
 
         guard let range = TimeRange(start: start, end: end) else { return .malformed }
-        return .range(range)
+        return .ranges([range])
     }
 
     /// Minutes from midnight, or nil if this is not a clock time.

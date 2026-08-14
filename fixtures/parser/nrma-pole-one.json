@@ -1,5 +1,5 @@
 {"panels":[
-{"unknown":{"rawText":"NO STOPPING\n6AM - 10AM & 3PM - 6PM\n←\nMON - FRI","reason":{"unrecognisedLine":"6AM - 10AM & 3PM - 6PM"}}},
-{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":{"start":"10:00","end":"15:00"},"direction":"unspecified","qualifiers":["meter"],"rawText":"1P\nMETER\n10AM - 3PM\nMON - FRI"}},
-{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["sat"],"publicHolidays":false},"times":{"start":"09:00","end":"12:30"},"direction":"left","qualifiers":[],"rawText":"1P\n9AM - 12:30PM\nSAT\n←"}}
+{"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":[{"start":"06:00","end":"10:00"},{"start":"15:00","end":"18:00"}],"direction":"left","qualifiers":[],"rawText":"NO STOPPING\n6AM - 10AM & 3PM - 6PM\n←\nMON - FRI"}},
+{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":[{"start":"10:00","end":"15:00"}],"direction":"unspecified","qualifiers":["meter"],"rawText":"1P\nMETER\n10AM - 3PM\nMON - FRI"}},
+{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["sat"],"publicHolidays":false},"times":[{"start":"09:00","end":"12:30"}],"direction":"left","qualifiers":[],"rawText":"1P\n9AM - 12:30PM\nSAT\n←"}}
 ]}

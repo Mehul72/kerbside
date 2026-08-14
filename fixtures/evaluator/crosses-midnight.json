@@ -1,12 +1,12 @@
 {
-  "sign": {"panels":[{"panel":{"restriction":"noParking","days":{"weekdays":["fri"],"publicHolidays":false},"times":{"start":"22:00","end":"06:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n10PM - 6AM\nFRI"}}]},
+  "sign": {"panels":[{"panel":{"restriction":"noParking","days":{"weekdays":["fri"],"publicHolidays":false},"times":[{"start":"22:00","end":"06:00"}],"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n10PM - 6AM\nFRI"}}]},
   "instant": "2026-08-14T16:30:00Z",
   "timeZone": "Australia/Sydney",
   "expected": {
     "instant": "2026-08-14T16:30:00Z",
-    "active": [{"restriction":"noParking","days":{"weekdays":["fri"],"publicHolidays":false},"times":{"start":"22:00","end":"06:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n10PM - 6AM\nFRI"}],
+    "active": [{"restriction":"noParking","days":{"weekdays":["fri"],"publicHolidays":false},"times":[{"start":"22:00","end":"06:00"}],"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n10PM - 6AM\nFRI"}],
     "inactive": [],
     "unknowns": [],
-    "nextChange": {"panel":{"restriction":"noParking","days":{"weekdays":["fri"],"publicHolidays":false},"times":{"start":"22:00","end":"06:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n10PM - 6AM\nFRI"},"kind":"ends","at":"2026-08-14T20:00:00Z"}
+    "nextChange": {"panel":{"restriction":"noParking","days":{"weekdays":["fri"],"publicHolidays":false},"times":[{"start":"22:00","end":"06:00"}],"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n10PM - 6AM\nFRI"},"kind":"ends","at":"2026-08-14T20:00:00Z"}
   }
 }

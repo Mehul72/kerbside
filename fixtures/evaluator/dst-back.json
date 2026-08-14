@@ -1,12 +1,12 @@
 {
-  "sign": {"panels":[{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"01:00","end":"04:00"},"direction":"unspecified","qualifiers":[],"rawText":"1P\n1AM - 4AM"}}]},
+  "sign": {"panels":[{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":[{"start":"01:00","end":"04:00"}],"direction":"unspecified","qualifiers":[],"rawText":"1P\n1AM - 4AM"}}]},
   "instant": "2026-04-04T15:30:00Z",
   "timeZone": "Australia/Sydney",
   "expected": {
     "instant": "2026-04-04T15:30:00Z",
-    "active": [{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"01:00","end":"04:00"},"direction":"unspecified","qualifiers":[],"rawText":"1P\n1AM - 4AM"}],
+    "active": [{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":[{"start":"01:00","end":"04:00"}],"direction":"unspecified","qualifiers":[],"rawText":"1P\n1AM - 4AM"}],
     "inactive": [],
     "unknowns": [],
-    "nextChange": {"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"01:00","end":"04:00"},"direction":"unspecified","qualifiers":[],"rawText":"1P\n1AM - 4AM"},"kind":"ends","at":"2026-04-04T18:00:00Z"}
+    "nextChange": {"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":[{"start":"01:00","end":"04:00"}],"direction":"unspecified","qualifiers":[],"rawText":"1P\n1AM - 4AM"},"kind":"ends","at":"2026-04-04T18:00:00Z"}
   }
 }

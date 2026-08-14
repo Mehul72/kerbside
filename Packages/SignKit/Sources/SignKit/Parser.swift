@@ -32,8 +32,8 @@ public enum Parser {
                 continue
             case .restriction(let restriction):
                 restrictions.append(restriction)
-            case .timeRange(let range):
-                timeRanges.append(range)
+            case .timeRanges(let ranges):
+                timeRanges.append(contentsOf: ranges)
             case .daySet(let days):
                 daySets.append(days)
             case .qualifier(let qualifier):
@@ -51,14 +51,13 @@ public enum Parser {
 
         guard let restriction = restrictions.first else { return fail(.noRestrictionFound) }
         guard Set(restrictions).count == 1 else { return fail(.conflictingRestrictions) }
-        guard Set(timeRanges).count <= 1 else { return fail(.conflictingTimeRanges) }
         guard Set(daySets).count <= 1 else { return fail(.conflictingDaySets) }
 
         return .panel(
             Panel(
                 restriction: restriction,
                 days: daySets.first ?? .allDays,
-                times: timeRanges.first ?? .allDay,
+                times: TimeWindows(timeRanges),
                 direction: resolve(directions),
                 qualifiers: canonical(qualifiers),
                 rawText: block.rawText
@@ -107,7 +106,7 @@ public enum Parser {
 
     private static func isCompleteToken(_ token: LineToken?) -> Bool {
         switch token {
-        case .restriction, .timeRange, .daySet, .qualifier, .malformedTimeRange:
+        case .restriction, .timeRanges, .daySet, .qualifier, .malformedTimeRange:
             true
         case .none, .unrecognised:
             false

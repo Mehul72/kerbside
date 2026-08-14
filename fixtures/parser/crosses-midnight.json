@@ -1,1 +1,1 @@
-{"panels":[{"panel":{"restriction":"noParking","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"22:00","end":"06:00"},"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n10PM - 6AM"}}]}
+{"panels":[{"panel":{"restriction":"noParking","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":[{"start":"22:00","end":"06:00"}],"direction":"unspecified","qualifiers":[],"rawText":"NO PARKING\n10PM - 6AM"}}]}

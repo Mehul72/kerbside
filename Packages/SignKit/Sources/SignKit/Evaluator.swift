@@ -88,10 +88,13 @@ public struct Evaluator: Sendable {
         let yesterday = adding(days: -1, to: today, calendar: calendar)
 
         return [yesterday, today].contains { ruleDate in
-            guard dayMatches(panel.days, on: ruleDate, calendar: calendar),
-                  let interval = interval(for: panel.times, on: ruleDate, calendar: calendar)
-            else { return false }
-            return instant >= interval.start && instant < interval.end
+            guard dayMatches(panel.days, on: ruleDate, calendar: calendar) else { return false }
+            return panel.times.ranges.contains { range in
+                guard let interval = interval(for: range, on: ruleDate, calendar: calendar) else {
+                    return false
+                }
+                return instant >= interval.start && instant < interval.end
+            }
         }
     }
 
@@ -122,11 +125,14 @@ public struct Evaluator: Sendable {
         // keeping a corrupt provider from causing an unbounded search.
         for offset in -1...370 {
             let ruleDate = adding(days: offset, to: today, calendar: calendar)
-            guard dayMatches(panel.days, on: ruleDate, calendar: calendar),
-                  let interval = interval(for: panel.times, on: ruleDate, calendar: calendar)
-            else { continue }
-            if interval.start > instant { candidates.insert(interval.start) }
-            if interval.end > instant { candidates.insert(interval.end) }
+            guard dayMatches(panel.days, on: ruleDate, calendar: calendar) else { continue }
+            for range in panel.times.ranges {
+                guard let interval = interval(for: range, on: ruleDate, calendar: calendar) else {
+                    continue
+                }
+                if interval.start > instant { candidates.insert(interval.start) }
+                if interval.end > instant { candidates.insert(interval.end) }
+            }
         }
 
         for candidate in candidates.sorted() {

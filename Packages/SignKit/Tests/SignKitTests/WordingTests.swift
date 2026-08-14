@@ -33,10 +33,29 @@ struct WordingTests {
 
     @Test("clock wording names midnight and noon")
     func clocks() {
-        #expect(Wording.describe(TimeRange.allDay) == "at all times")
-        #expect(Wording.describe(TimeRange(start: 1320, end: 360)!) == "10pm to 6am")
-        #expect(Wording.describe(TimeRange(start: 540, end: 750)!) == "9am to 12:30pm")
-        #expect(Wording.describe(TimeRange(start: 720, end: 1080)!) == "noon to 6pm")
+        #expect(Wording.describe(TimeWindows.allDay) == "at all times")
+        #expect(Wording.describe(TimeWindows([TimeRange(start: 1320, end: 360)!])) == "10pm to 6am")
+        #expect(Wording.describe(TimeWindows([TimeRange(start: 540, end: 750)!])) == "9am to 12:30pm")
+        #expect(Wording.describe(TimeWindows([TimeRange(start: 720, end: 1080)!])) == "noon to 6pm")
+    }
+
+    @Test("a peak hour panel names both of its windows")
+    func peakHourWindows() throws {
+        let sign = Parser.parse("NO STOPPING\n6AM - 10AM & 3PM - 6PM\nMON - FRI")
+        let panel = try #require(sign.parsedPanels.first)
+        #expect(
+            Wording.describe(panel)
+                == "No stopping, Mon to Fri, 6am to 10am and 3pm to 6pm"
+        )
+    }
+
+    @Test("windows are ordered however the sign wrote them")
+    func windowOrdering() {
+        let evening = TimeRange(start: 900, end: 1080)!
+        let morning = TimeRange(start: 360, end: 600)!
+        #expect(TimeWindows([evening, morning]) == TimeWindows([morning, evening]))
+        #expect(TimeWindows([morning, morning]).ranges.count == 1)
+        #expect(TimeWindows([]).isAllDay)
     }
 
     @Test("durations read the way the sign is spoken")

@@ -1,0 +1,1 @@
+{"panels":[{"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":[{"start":"06:00","end":"10:00"},{"start":"15:00","end":"18:00"}],"direction":"unspecified","qualifiers":[],"rawText":"NO STOPPING\n6AM - 10AM & 3PM - 6PM\nMON - FRI"}}]}

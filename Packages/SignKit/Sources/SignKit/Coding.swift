@@ -107,6 +107,17 @@ extension TimeRange: Codable {
     }
 }
 
+extension TimeWindows: Codable {
+    public init(from decoder: Decoder) throws {
+        self.init(try decoder.singleValueContainer().decode([TimeRange].self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(ranges)
+    }
+}
+
 extension Restriction: Codable {
     public init(from decoder: Decoder) throws {
         if let name = try? decoder.singleValueContainer().decode(String.self) {
@@ -146,7 +157,6 @@ extension UnknownReason: Codable {
             case "emptyPanel": self = .emptyPanel
             case "noRestrictionFound": self = .noRestrictionFound
             case "conflictingRestrictions": self = .conflictingRestrictions
-            case "conflictingTimeRanges": self = .conflictingTimeRanges
             case "conflictingDaySets": self = .conflictingDaySets
             default: throw decodingError(decoder, "unknown reason \"\(name)\"")
             }
@@ -166,8 +176,7 @@ extension UnknownReason: Codable {
 
     public func encode(to encoder: Encoder) throws {
         switch self {
-        case .emptyPanel, .noRestrictionFound, .conflictingRestrictions,
-             .conflictingTimeRanges, .conflictingDaySets:
+        case .emptyPanel, .noRestrictionFound, .conflictingRestrictions, .conflictingDaySets:
             var container = encoder.singleValueContainer()
             try container.encode(plainName)
         case .unrecognisedLine(let line):
@@ -184,7 +193,6 @@ extension UnknownReason: Codable {
         case .emptyPanel: "emptyPanel"
         case .noRestrictionFound: "noRestrictionFound"
         case .conflictingRestrictions: "conflictingRestrictions"
-        case .conflictingTimeRanges: "conflictingTimeRanges"
         case .conflictingDaySets: "conflictingDaySets"
         case .unrecognisedLine: "unrecognisedLine"
         case .malformedTimeRange: "malformedTimeRange"
@@ -209,7 +217,7 @@ extension Panel: Codable {
         let container = try decoder.container(keyedBy: Keys.self)
         restriction = try container.decode(Restriction.self, forKey: .restriction)
         days = try container.decodeIfPresent(DaySet.self, forKey: .days) ?? .allDays
-        times = try container.decodeIfPresent(TimeRange.self, forKey: .times) ?? .allDay
+        times = try container.decodeIfPresent(TimeWindows.self, forKey: .times) ?? .allDay
         direction = try container.decodeIfPresent(Direction.self, forKey: .direction) ?? .unspecified
         qualifiers = try container.decodeIfPresent([Qualifier].self, forKey: .qualifiers) ?? []
         rawText = try container.decode(String.self, forKey: .rawText)

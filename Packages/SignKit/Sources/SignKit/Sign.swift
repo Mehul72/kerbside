@@ -4,7 +4,7 @@ import Foundation
 public struct Panel: Hashable, Sendable {
     public var restriction: Restriction
     public var days: DaySet
-    public var times: TimeRange
+    public var times: TimeWindows
     public var direction: Direction
     public var qualifiers: [Qualifier]
     public var rawText: String
@@ -12,7 +12,7 @@ public struct Panel: Hashable, Sendable {
     public init(
         restriction: Restriction,
         days: DaySet = .allDays,
-        times: TimeRange = .allDay,
+        times: TimeWindows = .allDay,
         direction: Direction = .unspecified,
         qualifiers: [Qualifier] = [],
         rawText: String
@@ -34,7 +34,6 @@ public enum UnknownReason: Hashable, Sendable {
     case unrecognisedLine(String)
     case malformedTimeRange(String)
     case conflictingRestrictions
-    case conflictingTimeRanges
     case conflictingDaySets
 }
 

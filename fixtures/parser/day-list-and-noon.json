@@ -1,1 +1,1 @@
-{"panels":[{"panel":{"restriction":{"timeLimited":30},"days":{"weekdays":["mon","wed","fri"],"publicHolidays":false},"times":{"start":"09:00","end":"12:00"},"direction":"unspecified","qualifiers":["ticket"],"rawText":"1/2P\n9AM - NOON\nMON, WED, FRI\nTICKET"}}]}
+{"panels":[{"panel":{"restriction":{"timeLimited":30},"days":{"weekdays":["mon","wed","fri"],"publicHolidays":false},"times":[{"start":"09:00","end":"12:00"}],"direction":"unspecified","qualifiers":["ticket"],"rawText":"1/2P\n9AM - NOON\nMON, WED, FRI\nTICKET"}}]}
