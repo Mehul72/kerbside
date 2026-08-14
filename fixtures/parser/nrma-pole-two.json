@@ -1,7 +1,6 @@
 {"panels":[
-{"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"00:00","end":"24:00"},"direction":"left","qualifiers":[],"rawText":"NO STOPPING ←"}},
-{"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":{"start":"06:30","end":"09:30"},"direction":"right","qualifiers":[],"rawText":"NO STOPPING →\n6:30AM - 9:30AM\nMON - FRI"}},
-{"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":{"start":"15:30","end":"18:30"},"direction":"right","qualifiers":[],"rawText":"NO STOPPING →\n3:30PM - 6:30PM\nMON - FRI"}},
-{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":{"start":"09:30","end":"15:30"},"direction":"unspecified","qualifiers":["meter"],"rawText":"1P\n9:30AM - 3:30PM\nMON - FRI\nMETER"}},
-{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["sat"],"publicHolidays":false},"times":{"start":"09:00","end":"12:00"},"direction":"unspecified","qualifiers":[],"rawText":"1P\n9AM - 12PM\nSAT"}}
+{"panel":{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":{"start":"00:00","end":"24:00"},"direction":"left","qualifiers":[],"rawText":"NO STOPPING\n←"}},
+{"unknown":{"rawText":"NO STOPPING\n→\n6:30AM - 9:30AM\n3:30PM - 6:30PM\nMON - FRI","reason":"conflictingTimeRanges"}},
+{"panel":{"restriction":{"timeLimited":60},"days":{"weekdays":["sat"],"publicHolidays":false},"times":{"start":"09:00","end":"12:30"},"direction":"right","qualifiers":[],"rawText":"1P\n9AM - 12:30PM\nSAT\n→"}},
+{"unknown":{"rawText":"1P\nMETER\n9:30AM - 3:30PM\nMON - FRI\n30 MINUTES FREE\nENTER NUMBER PLATE INTO METER\n→","reason":{"unrecognisedLine":"30 MINUTES FREE"}}}
 ]}

@@ -19,6 +19,26 @@
             "target": "signread",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release signread (Packages/SignKit)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:kerbside}/Packages/SignVision",
+            "name": "Debug signlook (Packages/SignVision)",
+            "target": "signlook",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug signlook (Packages/SignVision)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:kerbside}/Packages/SignVision",
+            "name": "Release signlook (Packages/SignVision)",
+            "target": "signlook",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release signlook (Packages/SignVision)"
         }
     ]
 }

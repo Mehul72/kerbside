@@ -1,0 +1,7 @@
+{
+"note":"Liverpool NSW. Red NO STOPPING 6AM-10AM & 3PM-6PM MON-FRI pointing left, a symbolic no-parking sign with no text, 1P METER 10AM-3PM MON-FRI, and 1P 9AM-12:30PM SAT pointing left. The NO STOPPING panel carries two time windows, which Panel cannot hold, so it is expected as an unknown rather than a rule.",
+"panels":[
+{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":{"start":"10:00","end":"15:00"},"direction":"unspecified","qualifiers":["meter"]},
+{"restriction":{"timeLimited":60},"days":{"weekdays":["sat"],"publicHolidays":false},"times":{"start":"09:00","end":"12:30"},"direction":"left","qualifiers":[]}
+],
+"unknownCount":1}
