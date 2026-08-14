@@ -1,0 +1,32 @@
+name: Kerbside
+options:
+  bundleIdPrefix: au.kerbside
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  SignKit:
+    path: Packages/SignKit
+  SignVision:
+    path: Packages/SignVision
+
+targets:
+  Kerbside:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    dependencies:
+      - package: SignKit
+      - package: SignVision
+    settings:
+      base:
+        PRODUCT_NAME: Kerbside
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_CFBundleDisplayName: Kerbside
+        INFOPLIST_KEY_NSCameraUsageDescription: Kerbside reads parking signs through the camera. Photographs stay on the device.
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        TARGETED_DEVICE_FAMILY: "1"
