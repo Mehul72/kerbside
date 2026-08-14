@@ -39,9 +39,12 @@ print("")
 
 let recogniser = SignRecognizer()
 let semaphore = DispatchSemaphore(value: 0)
-var outcome: Result<SignReading, Error>?
+nonisolated(unsafe) var outcome: Result<SignReading, Error>?
 
-Task {
+// Detached on purpose. Top level code in main.swift runs on the main actor, so
+// a plain Task would inherit it and then wait on a semaphore the main thread is
+// already blocking, which deadlocks before the pipeline ever starts.
+Task.detached(priority: .userInitiated) {
     do {
         outcome = .success(try await recogniser.read(image, orientation: orientation))
     } catch {
