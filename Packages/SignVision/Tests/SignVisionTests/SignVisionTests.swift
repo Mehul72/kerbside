@@ -87,12 +87,24 @@ struct PanelSegmenterTests {
 
     @Test("the on-device Vision request reads a rendered restriction")
     func textRecognition() async throws {
-        let image = try #require(Self.renderedSign())
+        let image = try #require(Self.renderedSign(withContents: true))
 
         let reading = try await SignRecognizer().read(image)
 
-        #expect(reading.blocks.contains { $0.rawText.contains("NO STOPPING") })
-        #expect(reading.sign.parsedPanels.contains { $0.restriction == .noStopping })
+        #expect(reading.blocks.count == 1)
+        #expect(reading.sign.parsedPanels.map(\.restriction) == [.noStopping])
+        #expect(reading.sign.unknowns.isEmpty)
+    }
+
+    @Test("a detected panel with no OCR remains an explicit unknown")
+    func noTextRecognition() async throws {
+        let image = try #require(Self.renderedSign(withContents: false))
+
+        let reading = try await SignRecognizer().read(image)
+
+        #expect(reading.blocks.count == 1)
+        #expect(reading.sign.parsedPanels.isEmpty)
+        #expect(reading.sign.unknowns.map(\.reason) == [.emptyPanel])
     }
 
     @Test("low-confidence and empty observations are omitted")
@@ -123,7 +135,7 @@ struct PanelSegmenterTests {
 
         let sign = SignVision.assemble(blocks)
 
-        #expect(SignVision.pipelineVersion == 1)
+        #expect(SignVision.pipelineVersion == 2)
         #expect(sign.parsedPanels.count == 1)
         #expect(sign.unknowns.count == 1)
         #expect(sign.unknowns.first?.rawText == "LOADING ZONE")
@@ -131,17 +143,58 @@ struct PanelSegmenterTests {
 
     @Test("a coloured panel with no readable text becomes an explicit unknown")
     func unreadablePanel() {
-        let region = PanelRegion(
-            boundingBox: CGRect(x: 0.1, y: 0.4, width: 0.8, height: 0.3),
-            colourHint: .red
-        )
+        let regions = [
+            PanelRegion(
+                boundingBox: CGRect(x: 0.1, y: 0.4, width: 0.8, height: 0.3),
+                colourHint: .red
+            ),
+            PanelRegion(
+                boundingBox: CGRect(x: 0.3, y: 0.48, width: 0.4, height: 0.1),
+                colourHint: .red
+            ),
+        ]
 
-        let blocks = PanelSegmenter().segment([], regions: [region])
+        let blocks = PanelSegmenter().segment([], regions: regions)
         let sign = SignVision.assemble(blocks)
 
         #expect(blocks.count == 1)
+        #expect(blocks.first?.boundingBox == regions[0].boundingBox)
         #expect(sign.unknowns.count == 1)
         #expect(sign.unknowns.first?.reason == .emptyPanel)
+    }
+
+    @Test("wrapped restriction and nested decoration stay one physical panel")
+    func fieldPhotoRegression() {
+        let observations = [
+            TextObservation(
+                text: "NO",
+                confidence: 0.95,
+                boundingBox: CGRect(x: 0.46, y: 0.70, width: 0.08, height: 0.05)
+            ),
+            TextObservation(
+                text: "STOPPING",
+                confidence: 0.95,
+                boundingBox: CGRect(x: 0.40, y: 0.62, width: 0.20, height: 0.05)
+            ),
+        ]
+        let regions = [
+            PanelRegion(
+                boundingBox: CGRect(x: 0.35, y: 0.25, width: 0.30, height: 0.55),
+                colourHint: .red
+            ),
+            PanelRegion(
+                boundingBox: CGRect(x: 0.42, y: 0.30, width: 0.16, height: 0.06),
+                colourHint: .red
+            ),
+        ]
+
+        let blocks = PanelSegmenter().segment(observations, regions: regions)
+        let sign = SignVision.assemble(blocks)
+
+        #expect(blocks.count == 1)
+        #expect(blocks.first?.rawText == "NO\nSTOPPING")
+        #expect(sign.parsedPanels.map(\.restriction) == [.noStopping])
+        #expect(sign.unknowns.isEmpty)
     }
 
     private func line(_ text: String, y: CGFloat) -> TextObservation {
@@ -193,9 +246,9 @@ struct PanelSegmenterTests {
         return context.makeImage()
     }
 
-    private static func renderedSign() -> CGImage? {
+    private static func renderedSign(withContents: Bool) -> CGImage? {
         let width = 1_000
-        let height = 500
+        let height = 1_300
         guard let context = CGContext(
             data: nil,
             width: width,
@@ -206,25 +259,51 @@ struct PanelSegmenterTests {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return nil }
 
-        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.setFillColor(CGColor(gray: 0.85, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        context.setStrokeColor(CGColor(red: 0.85, green: 0, blue: 0, alpha: 1))
-        context.setLineWidth(14)
-        context.stroke(CGRect(x: 35, y: 35, width: 930, height: 430))
+        let panel = CGRect(x: 250, y: 100, width: 500, height: 1_100)
+        context.setFillColor(CGColor(red: 0.82, green: 0, blue: 0, alpha: 1))
+        context.fill(panel)
+        context.setStrokeColor(CGColor(gray: 1, alpha: 1))
+        context.setLineWidth(12)
+        context.stroke(panel.insetBy(dx: 18, dy: 18))
 
-        let font = CTFontCreateWithName("Helvetica-Bold" as CFString, 112, nil)
+        guard withContents else { return context.makeImage() }
+
+        draw("NO", size: 150, baseline: 920, in: context, canvasWidth: CGFloat(width))
+        draw("STOPPING", size: 90, baseline: 750, in: context, canvasWidth: CGFloat(width))
+
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.fill(CGRect(x: 385, y: 280, width: 250, height: 34))
+        context.beginPath()
+        context.move(to: CGPoint(x: 320, y: 297))
+        context.addLine(to: CGPoint(x: 410, y: 235))
+        context.addLine(to: CGPoint(x: 410, y: 359))
+        context.closePath()
+        context.fillPath()
+        return context.makeImage()
+    }
+
+    private static func draw(
+        _ string: String,
+        size: CGFloat,
+        baseline: CGFloat,
+        in context: CGContext,
+        canvasWidth: CGFloat
+    ) {
+        let font = CTFontCreateWithName("Helvetica-Bold" as CFString, size, nil)
         let text = NSAttributedString(
-            string: "NO STOPPING",
+            string: string,
             attributes: [
                 NSAttributedString.Key(kCTFontAttributeName as String): font,
                 NSAttributedString.Key(kCTForegroundColorAttributeName as String):
-                    CGColor(gray: 0, alpha: 1),
+                    CGColor(gray: 1, alpha: 1),
             ]
         )
         let line = CTLineCreateWithAttributedString(text)
+        let lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
         context.textMatrix = .identity
-        context.textPosition = CGPoint(x: 110, y: 200)
+        context.textPosition = CGPoint(x: (canvasWidth - lineWidth) / 2, y: baseline)
         CTLineDraw(line, context)
-        return context.makeImage()
     }
 }

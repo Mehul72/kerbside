@@ -74,7 +74,6 @@ public struct SignRecognizer: Sendable {
                 )
             }
         }
-        guard !observations.isEmpty else { throw SignVisionError.noTextFound }
 
         let rectangles = (rectangleRequest.results ?? []).map(\.boundingBox)
         let colourHints = PanelColourSampler.hints(for: rectangles, in: prepared)

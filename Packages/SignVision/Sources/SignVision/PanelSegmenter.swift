@@ -64,12 +64,13 @@ public struct PanelSegmenter: Sendable {
             let region = regionIndices.count == 1
                 ? canonicalRegions[regionIndices.first!]
                 : nil
+            let lineBounds = groupLines.dropFirst().reduce(groupLines[0].boundingBox) {
+                $0.union($1.boundingBox)
+            }
             return PanelBlock(
                 rawText: groupLines.map(\.text).joined(separator: "\n"),
                 lines: groupLines,
-                boundingBox: groupLines.dropFirst().reduce(groupLines[0].boundingBox) {
-                    $0.union($1.boundingBox)
-                },
+                boundingBox: region?.boundingBox ?? lineBounds,
                 colourHint: region?.colourHint ?? .none
             )
         }
@@ -93,27 +94,32 @@ public struct PanelSegmenter: Sendable {
     private func bestRegion(for line: TextObservation, in regions: [PanelRegion]) -> Int? {
         let center = CGPoint(x: line.boundingBox.midX, y: line.boundingBox.midY)
         let candidates = regions.indices.filter { index in
-            let region = regions[index].boundingBox.insetBy(dx: -0.015, dy: -0.015)
+            let region = regions[index].boundingBox.insetBy(dx: -0.005, dy: -0.005)
             return region.contains(center)
                 && regions[index].boundingBox.height >= line.boundingBox.height * 1.4
                 && regions[index].boundingBox.width >= line.boundingBox.width * 0.75
         }
-        guard let smallestArea = candidates.map({ area(regions[$0].boundingBox) }).min() else {
-            return nil
+        guard !candidates.isEmpty else { return nil }
+
+        // On a red or green sign, Vision often finds both the sign face and
+        // internal rectangles around words or arrows. Prefer the enclosing
+        // coloured face so every line receives one physical-panel identity.
+        // Near-whole-image rectangles are excluded as background wrappers.
+        let colouredFaces = candidates.filter { index in
+            regions[index].colourHint != .none
+                && area(regions[index].boundingBox) <= 0.65
+        }
+        if let face = colouredFaces.max(by: {
+            area(regions[$0].boundingBox) < area(regions[$1].boundingBox)
+        }) {
+            return face
         }
 
-        // When nested rectangles are nearly the same size, a red/green signal
-        // breaks the tie. A much larger coloured rectangle never swallows a
-        // smaller panel merely because it had saturated pixels.
-        return candidates
-            .filter { area(regions[$0].boundingBox) <= smallestArea * 1.2 }
-            .sorted { lhs, rhs in
-                let lhsColourless = regions[lhs].colourHint == .none
-                let rhsColourless = regions[rhs].colourHint == .none
-                if lhsColourless != rhsColourless { return !lhsColourless }
-                return area(regions[lhs].boundingBox) < area(regions[rhs].boundingBox)
-            }
-            .first
+        // Without colour evidence, the smallest containing rectangle is the
+        // least likely to bridge two adjacent panels.
+        return candidates.min(by: {
+            area(regions[$0].boundingBox) < area(regions[$1].boundingBox)
+        })
     }
 
     private func shouldSplit(
@@ -144,31 +150,36 @@ public struct PanelSegmenter: Sendable {
         return lhs.text < rhs.text
     }
 
-    /// A coloured sign rectangle with no OCR line is still a panel result. Only
-    /// the smallest nested coloured rectangle is retained to avoid duplicates.
+    /// A coloured sign rectangle with no OCR line is still a panel result.
+    /// Decorative rectangles inside a text-bearing panel are ignored, and an
+    /// unreadable nest keeps its outer panel rather than each inner shape.
     private func unreadableBlocks(
         in regions: [PanelRegion],
         excludingLines lines: [TextObservation]
     ) -> [PanelBlock] {
-        regions.indices.compactMap { index in
+        let textBearingRegions = Set(regions.indices.filter { index in
+            lines.contains { line in contains(line, in: regions[index].boundingBox) }
+        })
+
+        return regions.indices.compactMap { index -> PanelBlock? in
             let region = regions[index]
             guard region.colourHint != .none else { return nil }
-            let containsText = lines.contains { line in
-                region.boundingBox.insetBy(dx: -0.015, dy: -0.015).contains(
-                    CGPoint(x: line.boundingBox.midX, y: line.boundingBox.midY)
-                )
-            }
-            guard !containsText else { return nil }
+            guard !textBearingRegions.contains(index) else { return nil }
 
-            let containsSmallerColouredRegion = regions.indices.contains { otherIndex in
+            let isInsideTextBearingPanel = textBearingRegions.contains { parentIndex in
+                encloses(regions[parentIndex].boundingBox, region.boundingBox)
+            }
+            guard !isInsideTextBearingPanel else { return nil }
+
+            let isInsideLargerUnreadableRegion = regions.indices.contains { otherIndex in
                 guard otherIndex != index, regions[otherIndex].colourHint != .none else {
                     return false
                 }
-                let other = regions[otherIndex].boundingBox
-                return area(other) < area(region.boundingBox) * 0.9
-                    && region.boundingBox.contains(CGPoint(x: other.midX, y: other.midY))
+                guard !textBearingRegions.contains(otherIndex) else { return false }
+                return area(regions[otherIndex].boundingBox) > area(region.boundingBox) * 1.1
+                    && encloses(regions[otherIndex].boundingBox, region.boundingBox)
             }
-            guard !containsSmallerColouredRegion else { return nil }
+            guard !isInsideLargerUnreadableRegion else { return nil }
             return PanelBlock(
                 rawText: "",
                 lines: [],
@@ -176,6 +187,16 @@ public struct PanelSegmenter: Sendable {
                 colourHint: region.colourHint
             )
         }
+    }
+
+    private func contains(_ line: TextObservation, in region: CGRect) -> Bool {
+        region.insetBy(dx: -0.015, dy: -0.015).contains(
+            CGPoint(x: line.boundingBox.midX, y: line.boundingBox.midY)
+        )
+    }
+
+    private func encloses(_ outer: CGRect, _ inner: CGRect) -> Bool {
+        outer.insetBy(dx: -0.015, dy: -0.015).contains(inner)
     }
 
     private func blockComesFirst(_ lhs: PanelBlock, _ rhs: PanelBlock) -> Bool {
