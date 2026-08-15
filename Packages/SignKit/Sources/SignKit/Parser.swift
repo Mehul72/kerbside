@@ -24,7 +24,7 @@ public enum Parser {
         // The first line that defeated the classifier, in sign order.
         var lineFailure: UnknownReason?
 
-        for (lineDirections, token) in classifyLogicalLines(block.lines) {
+        for (lineDirections, token) in classifyLogicalLines(foldMeridiems(block.lines)) {
             directions.append(contentsOf: lineDirections)
 
             switch token {
@@ -63,6 +63,49 @@ public enum Parser {
                 rawText: block.rawText
             )
         )
+    }
+
+    /// Reattaches AM and PM to the times they belong to.
+    ///
+    /// NSW signs set the meridiem in small type beneath the numerals, so text
+    /// recognition returns it as its own line: `9 30 - 3 30` followed by
+    /// `AM PM`. Left alone that line is unreadable and takes the whole panel
+    /// down with it, even though the sign is perfectly clear to a person.
+    ///
+    /// Only a line that is nothing but two markers is folded, and only onto a
+    /// window with two ends. A single stray marker cannot be placed without
+    /// guessing which end it belongs to, so it is left to fail.
+    static func foldMeridiems(_ lines: [String]) -> [String] {
+        var result: [String] = []
+
+        for line in lines {
+            let markers = line.split(separator: " ").map(String.init)
+            guard markers.count == 2,
+                  markers.allSatisfy({ $0 == "AM" || $0 == "PM" }),
+                  let previous = result.last
+            else {
+                result.append(line)
+                continue
+            }
+
+            let ends = previous.split(separator: "-", omittingEmptySubsequences: false)
+            guard ends.count == 2 else {
+                result.append(line)
+                continue
+            }
+            let start = ends[0].trimmingCharacters(in: .whitespaces)
+            let end = ends[1].trimmingCharacters(in: .whitespaces)
+            guard !start.isEmpty, !end.isEmpty,
+                  !start.hasSuffix("AM"), !start.hasSuffix("PM"),
+                  !end.hasSuffix("AM"), !end.hasSuffix("PM")
+            else {
+                result.append(line)
+                continue
+            }
+
+            result[result.count - 1] = "\(start)\(markers[0]) - \(end)\(markers[1])"
+        }
+        return result
     }
 
     /// Vision can return a visually wrapped phrase as one observation per

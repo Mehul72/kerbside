@@ -148,44 +148,142 @@ enum LineClassifier {
               let end = parseClock(endText, isEnd: true)
         else { return .notATimeRange }
 
-        guard let range = TimeRange(start: start, end: end) else { return .malformed }
+        guard let resolved = resolveMeridiems(start: start, end: end) else {
+            return .notATimeRange
+        }
+        guard let range = TimeRange(start: resolved.start, end: resolved.end) else {
+            return .malformed
+        }
         return .ranges([range])
+    }
+
+    /// A clock reading, which may not yet know whether it is morning.
+    ///
+    /// NSW signs print the minutes and the meridiem in superscript, and text
+    /// recognition frequently drops them, turning `9:30AM - 3:30PM` into
+    /// `930-330`. The digits survive; which half of the day they belong to has
+    /// to be recovered from the pair.
+    struct Clock {
+        var minutesIntoHalfDay: Int
+        var meridiem: Meridiem?
+        /// Already absolute, as MIDNIGHT and NOON are.
+        var fixed: Int?
+    }
+
+    enum Meridiem {
+        case morning
+        case afternoon
+    }
+
+    /// Works out which half of the day each end of a window belongs to.
+    ///
+    /// Where a sign states the meridiem it is obeyed. Where it does not, only
+    /// two situations are unambiguous, and anything else stays unread:
+    ///
+    /// * The stated hours run backwards, as `9:30 - 3:30` does. A window can
+    ///   only do that by crossing noon, so it is morning to afternoon.
+    /// * One end is stated. The other is then whichever half lets the window
+    ///   run forward through the day, provided only one half does.
+    ///
+    /// `6:30 - 9:30` is refused: a morning peak and an evening one are equally
+    /// consistent with those digits, and picking either would be a guess.
+    static func resolveMeridiems(start: Clock, end: Clock) -> (start: Int, end: Int)? {
+        if let startFixed = start.fixed, let endFixed = end.fixed {
+            return (startFixed, endFixed)
+        }
+
+        func absolute(_ clock: Clock, _ meridiem: Meridiem) -> Int {
+            if let fixed = clock.fixed { return fixed }
+            let hour = clock.minutesIntoHalfDay / 60
+            let minute = clock.minutesIntoHalfDay % 60
+            let hour24 = meridiem == .morning
+                ? (hour == 12 ? 0 : hour)
+                : (hour == 12 ? 12 : hour + 12)
+            return hour24 * 60 + minute
+        }
+
+        let startOptions = start.fixed != nil
+            ? [Meridiem.morning]
+            : start.meridiem.map { [$0] } ?? [.morning, .afternoon]
+        let endOptions = end.fixed != nil
+            ? [Meridiem.morning]
+            : end.meridiem.map { [$0] } ?? [.morning, .afternoon]
+
+        // Both stated: obey the sign, including a window that crosses midnight.
+        if start.meridiem != nil || start.fixed != nil,
+           end.meridiem != nil || end.fixed != nil {
+            return (absolute(start, startOptions[0]), absolute(end, endOptions[0]))
+        }
+
+        var solutions: [(start: Int, end: Int)] = []
+        for startMeridiem in startOptions {
+            for endMeridiem in endOptions {
+                let from = absolute(start, startMeridiem)
+                let to = absolute(end, endMeridiem)
+                // Forward through one day. A sign that means to cross midnight
+                // prints the meridiem, so an inferred window never does.
+                if to > from { solutions.append((from, to)) }
+            }
+        }
+        return solutions.count == 1 ? solutions[0] : nil
     }
 
     /// Minutes from midnight, or nil if this is not a clock time.
     ///
     /// `isEnd` only affects MIDNIGHT, which closes a window at 24:00 but opens
     /// one at 00:00.
-    static func parseClock(_ text: String, isEnd: Bool) -> Int? {
+    static func parseClock(_ text: String, isEnd: Bool) -> Clock? {
         let compact = text.replacingOccurrences(of: " ", with: "")
-        if compact == "MIDNIGHT" { return isEnd ? 1440 : 0 }
-        if compact == "NOON" || compact == "MIDDAY" { return 720 }
+        if compact == "MIDNIGHT" {
+            return Clock(minutesIntoHalfDay: 0, meridiem: nil, fixed: isEnd ? 1440 : 0)
+        }
+        if compact == "NOON" || compact == "MIDDAY" {
+            return Clock(minutesIntoHalfDay: 0, meridiem: nil, fixed: 720)
+        }
 
-        let isMorning: Bool
-        let body: String
+        var meridiem: Meridiem?
+        var body = compact
         if compact.hasSuffix("AM") {
-            isMorning = true
+            meridiem = .morning
             body = String(compact.dropLast(2))
         } else if compact.hasSuffix("PM") {
-            isMorning = false
+            meridiem = .afternoon
             body = String(compact.dropLast(2))
-        } else {
-            return nil
         }
         guard !body.isEmpty else { return nil }
 
         let digits = body.replacingOccurrences(of: ".", with: ":")
-        let pieces = digits.split(separator: ":", omittingEmptySubsequences: false)
-        guard pieces.count <= 2, let hour = Int(pieces[0]), (1...12).contains(hour) else { return nil }
+        let hour: Int
+        let minute: Int
 
-        var minute = 0
-        if pieces.count == 2 {
-            guard pieces[1].count == 2, let parsed = Int(pieces[1]), (0...59).contains(parsed) else { return nil }
-            minute = parsed
+        if digits.contains(":") {
+            let pieces = digits.split(separator: ":", omittingEmptySubsequences: false)
+            guard pieces.count == 2, let parsedHour = Int(pieces[0]),
+                  pieces[1].count == 2, let parsedMinute = Int(pieces[1])
+            else { return nil }
+            hour = parsedHour
+            minute = parsedMinute
+        } else {
+            // Superscript minutes come back joined to the hour: 930, 1230.
+            guard digits.allSatisfy(\.isNumber) else { return nil }
+            switch digits.count {
+            case 1, 2:
+                guard let parsed = Int(digits) else { return nil }
+                hour = parsed
+                minute = 0
+            case 3, 4:
+                guard let parsedHour = Int(digits.dropLast(2)),
+                      let parsedMinute = Int(digits.suffix(2))
+                else { return nil }
+                hour = parsedHour
+                minute = parsedMinute
+            default:
+                return nil
+            }
         }
 
-        let hour24 = isMorning ? (hour == 12 ? 0 : hour) : (hour == 12 ? 12 : hour + 12)
-        return hour24 * 60 + minute
+        guard (1...12).contains(hour), (0...59).contains(minute) else { return nil }
+        return Clock(minutesIntoHalfDay: hour * 60 + minute, meridiem: meridiem, fixed: nil)
     }
 
     // MARK: days
