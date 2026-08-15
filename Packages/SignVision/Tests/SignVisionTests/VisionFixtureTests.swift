@@ -38,6 +38,10 @@ struct VisionExpectation: Codable {
     /// Unknowns are counted, not described. The reason carries OCR text, which
     /// varies, but a panel that cannot be read must still never disappear.
     var unknownCount: Int
+    /// Directions read from graphical arrows, in block order, for the blocks
+    /// that carried one. Kept separate from `panels` because an arrow is found
+    /// on a sign face whether or not the words on it could be parsed.
+    var arrows: [String]?
 }
 
 /// Photographs of real poles, run through the same pipeline the app uses.
@@ -61,7 +65,7 @@ struct VisionFixtureTests {
             .sorted()
     }
 
-    static func read(_ name: String) async throws -> (Sign, VisionExpectation) {
+    static func read(_ name: String) async throws -> (SignReading, VisionExpectation) {
         let expectation = try JSONDecoder().decode(
             VisionExpectation.self,
             from: try Data(contentsOf: directory.appendingPathComponent("\(name).json"))
@@ -72,8 +76,7 @@ struct VisionFixtureTests {
         else {
             throw VisionFixtureError.unreadablePhotograph(name)
         }
-        let reading = try await SignRecognizer().read(image)
-        return (reading.sign, expectation)
+        return (try await SignRecognizer().read(image), expectation)
     }
 
     enum VisionFixtureError: Error {
@@ -86,8 +89,14 @@ struct VisionFixtureTests {
         #expect(!names.isEmpty, "no photographs to test against")
 
         for name in names {
-            let (sign, expected) = try await Self.read(name)
+            let (reading, expected) = try await Self.read(name)
+            let sign = reading.sign
             let actual = sign.parsedPanels.map(ExpectedPanel.init)
+
+            if let expectedArrows = expected.arrows {
+                let found = reading.blocks.compactMap { $0.visualDirection?.rawValue }
+                #expect(found == expectedArrows, "\(name) arrows")
+            }
 
             func check() {
                 #expect(actual == expected.panels, "\(name) panels")
@@ -105,7 +114,8 @@ struct VisionFixtureTests {
     @Test("a photographed pole never silently loses a panel")
     func nothingDisappears() async throws {
         for name in try Self.names() {
-            let (sign, expected) = try await Self.read(name)
+            let (reading, expected) = try await Self.read(name)
+            let sign = reading.sign
             let total = expected.panels.count + expected.unknownCount
             #expect(
                 sign.panels.count <= total || sign.unknowns.isEmpty == false,

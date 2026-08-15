@@ -1,0 +1,8 @@
+{
+ "note": "Official NSW artwork, public domain. A TAXI ZONE plate with one arrow pointing both. The zone type itself is not parsed yet, so the panel is expected as an unknown; what this fixture pins is that the arrow is still found and read.",
+ "panels": [],
+ "unknownCount": 1,
+ "arrows": [
+  "bidirectional"
+ ]
+}

@@ -100,34 +100,42 @@ enum PanelArrowDetector {
     ) -> [Int: SearchFace] {
         var faces: [Int: SearchFace] = [:]
 
+        func area(_ rect: CGRect) -> CGFloat { rect.width * rect.height }
+
         for index in blocks.indices {
+            var best: SearchFace?
+
+            // A trusted coloured rectangle is good evidence of a real face, but
+            // on a sign whose top half is a coloured banner it describes only
+            // that banner. It is a candidate, not the answer.
             if let region = blocks[index].sourceRegion,
                region.colourEvidence.supportsStandalonePanel,
                region.colourHint == .red || region.colourHint == .green {
-                faces[index] = SearchFace(
+                best = SearchFace(
                     boundingBox: region.boundingBox,
                     colour: region.colourHint
                 )
-                continue
             }
 
             let text = blocks[index].boundingBox
-            guard text.width > 0, text.height > 0 else { continue }
-
-            let enclosing = regions.filter { region in
-                containment(of: text, in: region.boundingBox) >= 0.9
-                    && region.boundingBox.width * region.boundingBox.height
-                        > text.width * text.height * 1.2
+            if text.width > 0, text.height > 0 {
+                let enclosing = regions.filter { region in
+                    containment(of: text, in: region.boundingBox) >= 0.9
+                        && area(region.boundingBox) > area(text) * 1.2
+                }
+                if let plate = enclosing.max(by: { area($0.boundingBox) < area($1.boundingBox) }),
+                   best.map({ area(plate.boundingBox) > area($0.boundingBox) }) ?? true {
+                    best = SearchFace(
+                        boundingBox: plate.boundingBox,
+                        colour: plate.colourHint
+                    )
+                }
             }
-            guard let plate = enclosing.max(by: { lhs, rhs in
-                lhs.boundingBox.width * lhs.boundingBox.height
-                    < rhs.boundingBox.width * rhs.boundingBox.height
-            }) else { continue }
 
-            faces[index] = SearchFace(
-                boundingBox: plate.boundingBox,
-                colour: plate.colourHint
-            )
+            // The widest enclosing face wins. An arrow lives in the blank half
+            // of the plate, below the words, so searching anything smaller than
+            // the whole face looks everywhere except where the arrow is.
+            if let best { faces[index] = best }
         }
         return faces
     }
@@ -476,7 +484,11 @@ private struct ArrowRaster {
             trace("rejected: too few pixels")
             return nil
         }
-        guard (0.16...0.86).contains(widthRatio) else {
+        // NSW arrows are drawn nearly edge to edge inside the plate. The old
+        // ceiling of 0.86 excluded the standard artwork, where the arrow spans
+        // 97% of the face. A full width bar is still rejected, by the taper
+        // test rather than by its size.
+        guard (0.16...0.98).contains(widthRatio) else {
             trace("rejected: width ratio")
             return nil
         }

@@ -1,4 +1,32 @@
 {
-"note":"Official NSW R5-400 artwork, public domain via Wikimedia Commons. One red plate, the words NO STOPPING, and a single white arrow pointing right. No days and no hours, so it applies every day at all times. The cleanest arrow case that exists.",
-"panels":[{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":[{"start":"00:00","end":"24:00"}],"direction":"right","qualifiers":[]}],
-"unknownCount":0}
+ "note": "Official NSW R5-400 artwork, public domain via Wikimedia Commons. One red plate, the words NO STOPPING, and a single white arrow pointing right. No days and no hours, so it applies every day at all times. The cleanest arrow case that exists.",
+ "panels": [
+  {
+   "restriction": "noStopping",
+   "days": {
+    "weekdays": [
+     "mon",
+     "tue",
+     "wed",
+     "thu",
+     "fri",
+     "sat",
+     "sun"
+    ],
+    "publicHolidays": true
+   },
+   "times": [
+    {
+     "start": "00:00",
+     "end": "24:00"
+    }
+   ],
+   "direction": "right",
+   "qualifiers": []
+  }
+ ],
+ "unknownCount": 0,
+ "arrows": [
+  "right"
+ ]
+}
