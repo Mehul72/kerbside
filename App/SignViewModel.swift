@@ -84,6 +84,10 @@ final class SignViewModel: ObservableObject {
         }
     }
 
+    /// The reading as a value, for the caller that wants to keep it against a
+    /// parked car rather than only look at it.
+    var currentSign: Sign? { sign }
+
     func reset() {
         requestID &+= 1
         readingTask?.cancel()

@@ -4,12 +4,18 @@ import SwiftUI
 import UIKit
 
 struct SignView: View {
+    /// Set when the reader was opened to put a sign against a parked car. The
+    /// reading is offered back rather than kept here, so the record is only
+    /// ever written in one place.
+    var onUse: ((Sign, UIImage?) -> Void)?
+    var onCancel: (() -> Void)?
+
     @StateObject private var model = SignViewModel()
     @State private var isCameraPresented = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isSelectingSign = false
 
-    private let timeZone = TimeZone(identifier: "Australia/Sydney")!
+    private let timeZone = SharedContainer.timeZone
 
     private var cameraAvailable: Bool {
         UIImagePickerController.isSourceTypeAvailable(.camera)
@@ -21,6 +27,17 @@ struct SignView: View {
             content
         }
         .preferredColorScheme(.dark)
+        .overlay(alignment: .topLeading) {
+            if let onCancel {
+                Button("Close", action: onCancel)
+                    .font(Kerb.label(.footnote))
+                    .tracking(1.2)
+                    .textCase(.uppercase)
+                    .foregroundStyle(Kerb.chalkDim)
+                    .padding(.horizontal, 22)
+                    .padding(.top, 8)
+            }
+        }
         .sheet(isPresented: $isSelectingSign) {
             if let image = model.lastImage {
                 SignCropView(
@@ -93,28 +110,36 @@ struct SignView: View {
         }
     }
 
-    /// Kept to a single row so the pole stays the screen. Reading another sign
-    /// is the only thing there is to do from here.
+    /// Kept to a single row so the pole stays the screen, with one full-width
+    /// action above it when the reading is wanted for a car.
     private var resultActions: some View {
-        HStack(spacing: 10) {
-            CompactAction(
-                title: "Photo",
-                icon: "camera",
-                action: { isCameraPresented = true }
-            )
-            .disabled(!cameraAvailable)
-            .opacity(cameraAvailable ? 1 : 0.4)
-
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                CompactActionLabel(title: "Library", icon: "photo.on.rectangle")
+        VStack(spacing: 12) {
+            if let onUse, let sign = model.currentSign {
+                Button("Use this sign") { onUse(sign, model.lastImage) }
+                    .buttonStyle(PlateButton(kind: .enamel))
+                    .frame(maxWidth: 340)
             }
 
-            if model.lastImage != nil {
+            HStack(spacing: 10) {
                 CompactAction(
-                    title: "Select",
-                    icon: "crop",
-                    action: { isSelectingSign = true }
+                    title: "Photo",
+                    icon: "camera",
+                    action: { isCameraPresented = true }
                 )
+                .disabled(!cameraAvailable)
+                .opacity(cameraAvailable ? 1 : 0.4)
+
+                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    CompactActionLabel(title: "Library", icon: "photo.on.rectangle")
+                }
+
+                if model.lastImage != nil {
+                    CompactAction(
+                        title: "Select",
+                        icon: "crop",
+                        action: { isSelectingSign = true }
+                    )
+                }
             }
         }
         .padding(.horizontal, 22)

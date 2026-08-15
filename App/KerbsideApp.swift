@@ -4,7 +4,7 @@ import SwiftUI
 struct KerbsideApp: App {
     var body: some Scene {
         WindowGroup {
-            SignView()
+            HomeView()
         }
     }
 }
