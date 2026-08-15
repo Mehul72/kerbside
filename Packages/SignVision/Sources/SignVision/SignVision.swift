@@ -4,7 +4,7 @@ import SignKit
 /// Entry points shared by the Vision-backed recognizer and deterministic tests.
 public enum SignVision {
     /// Incremented when recognition or segmentation changes materially.
-    public static let pipelineVersion = 4
+    public static let pipelineVersion = 5
 
     /// Parses panel blocks independently, preserving their top-to-bottom order.
     /// Understanding text stays in SignKit; SignVision only supplies boundaries.
