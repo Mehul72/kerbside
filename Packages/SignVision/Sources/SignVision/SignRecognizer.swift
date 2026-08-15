@@ -65,7 +65,7 @@ public struct SignRecognizer: Sendable {
         let handler = VNImageRequestHandler(cgImage: prepared, orientation: .up)
         try handler.perform([textRequest, rectangleRequest])
 
-        let observations = (textRequest.results ?? []).compactMap { observation in
+        let recognised = (textRequest.results ?? []).compactMap { observation in
             observation.topCandidates(1).first.map { candidate in
                 TextObservation(
                     text: candidate.string,
@@ -73,6 +73,27 @@ public struct SignRecognizer: Sendable {
                     boundingBox: observation.boundingBox
                 )
             }
+        }
+        // The plate colour immediately around each line. On a pole where no
+        // rectangle is found, a red line followed by a green one is the
+        // clearest evidence that two different signs are being read.
+        let lineColours = PanelColourSampler.samples(
+            // Narrowed vertically and widened sideways. A line sitting at the
+            // bottom edge of one plate would otherwise sample the plate below
+            // it too and come back mixed, which is exactly the boundary the
+            // colour is needed to find.
+            for: recognised.map {
+                $0.boundingBox.insetBy(dx: -$0.boundingBox.width * 0.06, dy: $0.boundingBox.height * 0.22)
+            },
+            in: prepared
+        )
+        let observations = zip(recognised, lineColours).map { line, sample in
+            TextObservation(
+                text: line.text,
+                confidence: line.confidence,
+                boundingBox: line.boundingBox,
+                colourHint: sample.hint
+            )
         }
 
         let rectangles = (rectangleRequest.results ?? []).map(\.boundingBox)

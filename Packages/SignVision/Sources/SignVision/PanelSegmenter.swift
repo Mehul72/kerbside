@@ -116,7 +116,8 @@ public struct PanelSegmenter: Sendable {
         return TextObservation(
             text: text,
             confidence: observation.confidence,
-            boundingBox: observation.boundingBox
+            boundingBox: observation.boundingBox,
+            colourHint: observation.colourHint
         )
     }
 
@@ -211,6 +212,19 @@ public struct PanelSegmenter: Sendable {
     ) -> Bool {
         if let previousRegion, let currentRegion {
             return previousRegion != currentRegion
+        }
+
+        // A change of plate colour ends a sign, whatever the gap. Stacked NSW
+        // signs sit almost flush, so the space between a red panel and the
+        // green one beneath it is no larger than the space between two lines
+        // on either. Colour is the only reliable boundary left once no
+        // rectangle was found around either face.
+        if previousLine.colourHint != currentLine.colourHint,
+           previousLine.colourHint != .none,
+           currentLine.colourHint != .none,
+           previousLine.colourHint != .mixed,
+           currentLine.colourHint != .mixed {
+            return true
         }
 
         let verticalGap = previousLine.boundingBox.minY - currentLine.boundingBox.maxY

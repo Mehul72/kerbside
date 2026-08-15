@@ -92,7 +92,8 @@ func report(_ reading: SignReading) {
         print("  box              \(format(block.boundingBox))")
         print("  text observations \(block.lines.count)")
         for line in block.lines {
-            print("    \"\(line.text)\"  confidence \(String(format: "%.2f", line.confidence))")
+            print("    \"\(line.text)\"  confidence \(String(format: "%.2f", line.confidence))"
+                + "  plate colour \(line.colourHint.rawValue)")
         }
         print("")
     }

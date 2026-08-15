@@ -8,11 +8,23 @@ public struct TextObservation: Hashable, Sendable {
     public var text: String
     public var confidence: Float
     public var boundingBox: CGRect
+    /// The colour of the plate this line sits on, when it could be sampled.
+    ///
+    /// Only ever a segmentation hint. It separates one sign from the next when
+    /// no rectangle was detected around either; it never contributes to what a
+    /// panel is taken to say.
+    public var colourHint: PanelColourHint
 
-    public init(text: String, confidence: Float, boundingBox: CGRect) {
+    public init(
+        text: String,
+        confidence: Float,
+        boundingBox: CGRect,
+        colourHint: PanelColourHint = .none
+    ) {
         self.text = text
         self.confidence = confidence
         self.boundingBox = boundingBox
+        self.colourHint = colourHint
     }
 }
 
