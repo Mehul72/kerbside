@@ -84,12 +84,11 @@ enum PanelArrowDetector {
 
     /// Chooses the area to search for each block's arrow.
     ///
-    /// A trusted coloured rectangle is used as-is. Otherwise the block's own
-    /// plate is looked for: the *largest* candidate rectangle that still
-    /// encloses this block's text. Largest rather than tightest, because an
-    /// arrow sits below the words in the blank half of the plate, and the
-    /// tightest enclosing rectangle is usually the coloured band around the
-    /// text, which excludes exactly the area the arrow is in.
+    /// The face is the *largest* candidate rectangle around the block's text,
+    /// not the tightest and not necessarily a trusted coloured one. Largest,
+    /// because an arrow sits below the words in the blank half of the plate,
+    /// and the tightest rectangle is usually the coloured band around the text
+    /// itself, which excludes exactly the area the arrow is in.
     ///
     /// On a pole of several signs the largest enclosing rectangle tends to be
     /// shared, so every block claims the same arrow and ownership refuses it.
@@ -119,8 +118,14 @@ enum PanelArrowDetector {
 
             let text = blocks[index].boundingBox
             if text.width > 0, text.height > 0 {
+                // The text centre, not the whole text box. Vision pads its
+                // text rectangles, so on a sign photographed small the words
+                // overshoot the plate edges and no rectangle fully contains
+                // them. Requiring full containment threw away the actual
+                // plate, which is the one face worth searching.
+                let centre = CGPoint(x: text.midX, y: text.midY)
                 let enclosing = regions.filter { region in
-                    containment(of: text, in: region.boundingBox) >= 0.9
+                    region.boundingBox.contains(centre)
                         && area(region.boundingBox) > area(text) * 1.2
                 }
                 if let plate = enclosing.max(by: { area($0.boundingBox) < area($1.boundingBox) }),
@@ -350,12 +355,13 @@ private struct ArrowRaster {
             return bounds(for: expanded)
         }
 
-        return Polarity.allCases.flatMap { polarity in
-            components(
+        return Polarity.allCases.flatMap { polarity -> [ArrowObservation] in
+            let found = components(
                 in: interior,
                 polarity: polarity,
                 excluding: excluded
-            ).compactMap { component in
+            )
+            return found.compactMap { component in
                 observation(
                     for: component,
                     in: interior,

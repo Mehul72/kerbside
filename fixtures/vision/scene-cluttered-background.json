@@ -1,0 +1,32 @@
+{
+ "note": "The NSW R5-400 plate composited at 18% of frame width onto bright overcast sky with bare branch clutter, saved as JPEG. Built to reproduce a sign photographed at distance, where Vision pads the text box wider than the plate itself. Before the centre containment fix, no sign face was chosen here and no arrow was searched for.",
+ "panels": [
+  {
+   "restriction": "noStopping",
+   "days": {
+    "weekdays": [
+     "mon",
+     "tue",
+     "wed",
+     "thu",
+     "fri",
+     "sat",
+     "sun"
+    ],
+    "publicHolidays": true
+   },
+   "times": [
+    {
+     "start": "00:00",
+     "end": "24:00"
+    }
+   ],
+   "direction": "left",
+   "qualifiers": []
+  }
+ ],
+ "unknownCount": 0,
+ "arrows": [
+  "left"
+ ]
+}
