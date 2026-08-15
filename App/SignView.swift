@@ -7,6 +7,7 @@ struct SignView: View {
     @StateObject private var model = SignViewModel()
     @State private var isCameraPresented = false
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var isSelectingSign = false
 
     private var cameraAvailable: Bool {
         UIImagePickerController.isSourceTypeAvailable(.camera)
@@ -31,8 +32,26 @@ struct SignView: View {
                                 ) {
                                     Label("Choose from Photos", systemImage: "photo.on.rectangle")
                                 }
+
+                                if model.lastImage != nil {
+                                    Button("Select the sign myself", systemImage: "crop") {
+                                        isSelectingSign = true
+                                    }
+                                }
                             }
                         }
+                    }
+                }
+                .sheet(isPresented: $isSelectingSign) {
+                    if let image = model.lastImage {
+                        SignCropView(
+                            image: image,
+                            onCancel: { isSelectingSign = false },
+                            onSelect: { area in
+                                isSelectingSign = false
+                                model.readSelection(area)
+                            }
+                        )
                     }
                 }
                 .fullScreenCover(isPresented: $isCameraPresented) {
@@ -77,7 +96,8 @@ struct SignView: View {
                 message: message,
                 selectedPhoto: $selectedPhoto,
                 cameraAvailable: cameraAvailable,
-                openCamera: { isCameraPresented = true }
+                openCamera: { isCameraPresented = true },
+                selectSign: model.lastImage == nil ? nil : { isSelectingSign = true }
             )
         }
     }
@@ -293,6 +313,9 @@ private struct FailureView: View {
     @Binding var selectedPhoto: PhotosPickerItem?
     let cameraAvailable: Bool
     let openCamera: () -> Void
+    /// Nil when there is no photograph to select from, so the offer is only
+    /// made when it can actually be taken up.
+    let selectSign: (() -> Void)?
 
     var body: some View {
         GeometryReader { geometry in
@@ -312,6 +335,18 @@ private struct FailureView: View {
                         cameraAvailable: cameraAvailable,
                         openCamera: openCamera
                     )
+
+                    if let selectSign {
+                        VStack(spacing: 6) {
+                            Button("Select the sign myself", systemImage: "crop", action: selectSign)
+                                .buttonStyle(.bordered)
+                                .controlSize(.large)
+                            Text("Use this when trees, sky or buildings crowd the sign.")
+                                .font(.footnote)
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 .padding(32)
                 .frame(maxWidth: .infinity, minHeight: geometry.size.height)

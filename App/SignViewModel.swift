@@ -21,6 +21,10 @@ final class SignViewModel: ObservableObject {
     private let recognizer: SignRecognizer
     private let timeZone: TimeZone
     private var sign: Sign?
+    /// The photograph the current reading came from, kept so the same picture
+    /// can be read again from a hand drawn selection without asking for it a
+    /// second time.
+    private(set) var lastImage: UIImage?
     private var readingTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var requestID = 0
@@ -68,10 +72,24 @@ final class SignViewModel: ObservableObject {
         refreshTask?.cancel()
         readingTask = nil
         sign = nil
+        lastImage = nil
         phase = .ready
     }
 
+    /// Reads the same photograph again, restricted to an area the person drew.
+    /// Used when the surroundings defeat automatic sign detection.
+    func readSelection(_ normalised: CGRect) {
+        guard let image = lastImage,
+              let cropped = image.croppedToNormalised(normalised)
+        else {
+            fail("That selection was too small to read. Try a larger box.", requestID: requestID)
+            return
+        }
+        read(cropped)
+    }
+
     private func recognize(_ image: UIImage, requestID: Int) async {
+        lastImage = image
         guard let cgImage = image.cgImage else {
             fail(
                 "The photograph could not be opened. Choose another photo.",
