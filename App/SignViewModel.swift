@@ -6,6 +6,20 @@ import SignVision
 import SwiftUI
 import UIKit
 
+/// One panel as the interface draws it: what was read, and where on the
+/// photograph it was read from.
+///
+/// The provenance is what lets a plate be sent back to the part of the sign it
+/// came from, which is the only way to see whether a panel was cut out of the
+/// photograph correctly.
+struct PlateItem: Identifiable {
+    let id: Int
+    let result: PanelResult
+    /// Normalised, with Vision's bottom-left origin. Nil when the reading
+    /// carried no geometry for this panel.
+    let sourceBox: CGRect?
+}
+
 @MainActor
 final class SignViewModel: ObservableObject {
     enum Phase {
@@ -17,6 +31,10 @@ final class SignViewModel: ObservableObject {
     }
 
     @Published private(set) var phase: Phase = .ready
+    /// Every panel in the order it appears on the pole, unknowns included.
+    /// The evaluation sorts panels by whether they are in force; this keeps
+    /// the order the sign is actually written in, which is what gets drawn.
+    @Published private(set) var plates: [PlateItem] = []
 
     private let recognizer: SignRecognizer
     private let timeZone: TimeZone
@@ -72,6 +90,7 @@ final class SignViewModel: ObservableObject {
         refreshTask?.cancel()
         readingTask = nil
         sign = nil
+        plates = []
         lastImage = nil
         phase = .ready
     }
@@ -105,6 +124,7 @@ final class SignViewModel: ObservableObject {
             )
             guard isCurrent(requestID) else { return }
             sign = reading.sign
+            plates = Self.plateItems(from: reading)
             readingTask = nil
             refreshEvaluation()
         } catch is CancellationError {
@@ -124,6 +144,7 @@ final class SignViewModel: ObservableObject {
         refreshTask?.cancel()
         readingTask = nil
         sign = nil
+        plates = []
         self.phase = phase
         return requestID
     }
@@ -143,6 +164,28 @@ final class SignViewModel: ObservableObject {
         guard isCurrent(requestID) else { return }
         readingTask = nil
         phase = .failed(message)
+    }
+
+    /// Pairs every panel with the block it was read from.
+    ///
+    /// Each block is assembled on its own through the same function the whole
+    /// reading used, so the pairing cannot drift from how the sign was really
+    /// put together. A block that produced two panels contributes both, each
+    /// carrying that block's box.
+    private static func plateItems(from reading: SignReading) -> [PlateItem] {
+        var items: [PlateItem] = []
+        for block in reading.blocks {
+            for result in SignVision.assemble([block]).panels {
+                items.append(
+                    PlateItem(
+                        id: items.count,
+                        result: result,
+                        sourceBox: block.boundingBox
+                    )
+                )
+            }
+        }
+        return items
     }
 
     private func refreshEvaluation() {

@@ -9,62 +9,40 @@ struct SignView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isSelectingSign = false
 
+    private let timeZone = TimeZone(identifier: "Australia/Sydney")!
+
     private var cameraAvailable: Bool {
         UIImagePickerController.isSourceTypeAvailable(.camera)
     }
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            Kerb.asphalt.ignoresSafeArea()
             content
-                .navigationTitle("Kerbside")
-                .toolbar {
-                    if case .result = model.phase {
-                        ToolbarItem(placement: .primaryAction) {
-                            Menu("Read another sign", systemImage: "plus.viewfinder") {
-                                Button("Take photo", systemImage: "camera") {
-                                    isCameraPresented = true
-                                }
-                                .disabled(!cameraAvailable)
-
-                                PhotosPicker(
-                                    selection: $selectedPhoto,
-                                    matching: .images
-                                ) {
-                                    Label("Choose from Photos", systemImage: "photo.on.rectangle")
-                                }
-
-                                if model.lastImage != nil {
-                                    Button("Select the sign myself", systemImage: "crop") {
-                                        isSelectingSign = true
-                                    }
-                                }
-                            }
-                        }
+        }
+        .preferredColorScheme(.dark)
+        .sheet(isPresented: $isSelectingSign) {
+            if let image = model.lastImage {
+                SignCropView(
+                    image: image,
+                    onCancel: { isSelectingSign = false },
+                    onSelect: { area in
+                        isSelectingSign = false
+                        model.readSelection(area)
                     }
-                }
-                .sheet(isPresented: $isSelectingSign) {
-                    if let image = model.lastImage {
-                        SignCropView(
-                            image: image,
-                            onCancel: { isSelectingSign = false },
-                            onSelect: { area in
-                                isSelectingSign = false
-                                model.readSelection(area)
-                            }
-                        )
-                    }
-                }
-                .fullScreenCover(isPresented: $isCameraPresented) {
-                    CameraPicker(isPresented: $isCameraPresented) { image in
-                        model.read(image)
-                    }
-                    .ignoresSafeArea()
-                }
-                .onChange(of: selectedPhoto) { item in
-                    guard let item else { return }
-                    selectedPhoto = nil
-                    model.read(item)
-                }
+                )
+            }
+        }
+        .fullScreenCover(isPresented: $isCameraPresented) {
+            CameraPicker(isPresented: $isCameraPresented) { image in
+                model.read(image)
+            }
+            .ignoresSafeArea()
+        }
+        .onChange(of: selectedPhoto) { item in
+            guard let item else { return }
+            selectedPhoto = nil
+            model.read(item)
         }
     }
 
@@ -72,286 +50,120 @@ struct SignView: View {
     private var content: some View {
         switch model.phase {
         case .ready:
-            ReadyView(
+            CaptureView(
                 selectedPhoto: $selectedPhoto,
                 cameraAvailable: cameraAvailable,
                 openCamera: { isCameraPresented = true }
             )
+
         case .loadingPhoto:
-            ProcessingView(
-                title: "Loading photo…",
-                detail: "The selected photograph stays on this device.",
+            ReadingView(
+                title: "Loading photo",
+                detail: "The photograph you chose stays on this device.",
+                photo: nil,
                 cancel: model.reset
             )
+
         case .reading:
-            ProcessingView(
-                title: "Reading sign…",
-                detail: "The photograph stays on this device.",
+            ReadingView(
+                title: "Reading sign",
+                detail: "Finding the panels on the pole. Nothing is sent anywhere.",
+                photo: model.lastImage,
                 cancel: model.reset
             )
+
         case .result(let evaluation):
-            ResultList(evaluation: evaluation)
+            PoleResultView(
+                evaluation: evaluation,
+                plates: model.plates,
+                photo: model.lastImage,
+                timeZone: timeZone
+            )
+            .safeAreaInset(edge: .bottom, spacing: 0) { resultActions }
+
         case .failed(let message):
-            FailureView(
+            NotReadView(
                 message: message,
                 selectedPhoto: $selectedPhoto,
                 cameraAvailable: cameraAvailable,
                 openCamera: { isCameraPresented = true },
+                photo: model.lastImage,
                 selectSign: model.lastImage == nil ? nil : { isSelectingSign = true }
             )
         }
     }
-}
 
-private struct ReadyView: View {
-    @Binding var selectedPhoto: PhotosPickerItem?
-    let cameraAvailable: Bool
-    let openCamera: () -> Void
-
-    var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                VStack(spacing: 24) {
-                    Image(systemName: "camera.viewfinder")
-                        .font(.system(size: 54))
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-
-                    VStack(spacing: 8) {
-                        Text("Read a parking sign")
-                            .font(.title2.bold())
-                        Text("Keep every panel in frame and hold the phone steady.")
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    PhotoSourceActions(
-                        selectedPhoto: $selectedPhoto,
-                        cameraAvailable: cameraAvailable,
-                        openCamera: openCamera
-                    )
-
-                    if !cameraAvailable {
-                        Text("A camera is not available. You can still choose an existing photo.")
-                            .font(.footnote)
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(32)
-                .frame(maxWidth: .infinity, minHeight: geometry.size.height)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-private struct ProcessingView: View {
-    let title: String
-    let detail: String
-    let cancel: () -> Void
-
-    var body: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 16) {
-                ProgressView()
-                    .controlSize(.large)
-                Text(title)
-                    .font(.headline)
-                Text(detail)
-                    .foregroundStyle(.secondary)
-            }
-            .accessibilityElement(children: .combine)
-
-            Button("Cancel", role: .cancel, action: cancel)
-                .buttonStyle(.bordered)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-private struct PhotoSourceActions: View {
-    @Binding var selectedPhoto: PhotosPickerItem?
-    let cameraAvailable: Bool
-    let openCamera: () -> Void
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Button(action: openCamera) {
-                Label("Take photo", systemImage: "camera")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+    /// Kept to a single row so the pole stays the screen. Reading another sign
+    /// is the only thing there is to do from here.
+    private var resultActions: some View {
+        HStack(spacing: 10) {
+            CompactAction(
+                title: "Photo",
+                icon: "camera",
+                action: { isCameraPresented = true }
+            )
             .disabled(!cameraAvailable)
+            .opacity(cameraAvailable ? 1 : 0.4)
 
             PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Label("Choose photo", systemImage: "photo.on.rectangle")
-                    .frame(maxWidth: .infinity)
+                CompactActionLabel(title: "Library", icon: "photo.on.rectangle")
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+
+            if model.lastImage != nil {
+                CompactAction(
+                    title: "Select",
+                    icon: "crop",
+                    action: { isSelectingSign = true }
+                )
+            }
         }
-        .frame(maxWidth: 320)
+        .padding(.horizontal, 22)
+        .padding(.top, 26)
+        .padding(.bottom, 10)
+        .frame(maxWidth: .infinity)
+        .background(
+            LinearGradient(
+                colors: [.clear, Kerb.asphalt.opacity(0.9), Kerb.asphalt],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea(edges: .bottom)
+        )
     }
 }
 
-private struct ResultList: View {
-    let evaluation: Evaluation
+private struct CompactAction: View {
+    let title: String
+    let icon: String
+    let action: () -> Void
 
     var body: some View {
-        List {
-            Section("In force now") {
-                if evaluation.active.isEmpty {
-                    Text("No panel covers this time.")
-                        .font(.headline)
-                } else {
-                    ForEach(Array(evaluation.active.enumerated()), id: \.offset) { item in
-                        PanelRow(panel: item.element)
-                    }
-                }
-            }
-
-            if let change = evaluation.nextChange {
-                Section("Next change") {
-                    NextChangeRow(change: change)
-                }
-            }
-
-            if !evaluation.inactive.isEmpty {
-                Section("Other panels") {
-                    ForEach(Array(evaluation.inactive.enumerated()), id: \.offset) { item in
-                        PanelRow(panel: item.element)
-                    }
-                }
-            }
-
-            if !evaluation.unknowns.isEmpty {
-                Section("Not read") {
-                    ForEach(Array(evaluation.unknowns.enumerated()), id: \.offset) { item in
-                        UnknownRow(unknown: item.element)
-                    }
-                }
-            }
+        Button(action: action) {
+            CompactActionLabel(title: title, icon: icon)
         }
+        .buttonStyle(.plain)
     }
 }
 
-private struct PanelRow: View {
-    let panel: Panel
+private struct CompactActionLabel: View {
+    let title: String
+    let icon: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(Wording.describe(panel))
-                .font(.headline)
-            if let note = Wording.missingDirectionNote(panel.direction) {
-                Text(note)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            Text(panel.rawText)
-                .font(.footnote.monospaced())
-                .foregroundStyle(.secondary)
+        VStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .medium))
+            Text(title)
+                .kerbLabel(Kerb.chalkDim, style: .caption2)
         }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Unknown panels use the same title, spacing, and source-text treatment as a
-/// parsed panel. They are results, not a secondary error log.
-private struct UnknownRow: View {
-    let unknown: Unknown
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Panel not read")
-                .font(.headline)
-            Text(Wording.describe(unknown.reason))
-                .font(.subheadline)
-            if !unknown.rawText.isEmpty {
-                Text(unknown.rawText)
-                    .font(.footnote.monospaced())
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-private struct NextChangeRow: View {
-    let change: Change
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label(Self.format(change.at), systemImage: "clock")
-                .font(.headline)
-            Text(changeDescription)
-                .font(.subheadline)
-        }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-    }
-
-    private static func format(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeZone = TimeZone(identifier: "Australia/Sydney")
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-
-    private var changeDescription: String {
-        let verb = change.kind == .begins ? "Begins" : "Ends"
-        return "\(verb): \(Wording.describe(change.panel))"
-    }
-}
-
-private struct FailureView: View {
-    let message: String
-    @Binding var selectedPhoto: PhotosPickerItem?
-    let cameraAvailable: Bool
-    let openCamera: () -> Void
-    /// Nil when there is no photograph to select from, so the offer is only
-    /// made when it can actually be taken up.
-    let selectSign: (() -> Void)?
-
-    var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                VStack(spacing: 20) {
-                    Image(systemName: "text.viewfinder")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-                    Text("Sign not read")
-                        .font(.title2.bold())
-                    Text(message)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
-                    PhotoSourceActions(
-                        selectedPhoto: $selectedPhoto,
-                        cameraAvailable: cameraAvailable,
-                        openCamera: openCamera
-                    )
-
-                    if let selectSign {
-                        VStack(spacing: 6) {
-                            Button("Select the sign myself", systemImage: "crop", action: selectSign)
-                                .buttonStyle(.bordered)
-                                .controlSize(.large)
-                            Text("Use this when trees, sky or buildings crowd the sign.")
-                                .font(.footnote)
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                .padding(32)
-                .frame(maxWidth: .infinity, minHeight: geometry.size.height)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .foregroundStyle(Kerb.chalk)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 11)
+        .background(Color.white.opacity(0.05))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Kerb.chalkFaint.opacity(0.4), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }

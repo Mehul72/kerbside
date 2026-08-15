@@ -20,9 +20,8 @@ struct SignCropView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
-                Text("Drag a box around one sign.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Text("Drag a box around one sign")
+                    .kerbLabel()
 
                 GeometryReader { geometry in
                     ZStack(alignment: .topLeading) {
@@ -33,8 +32,8 @@ struct SignCropView: View {
 
                         if let box = selection {
                             Rectangle()
-                                .strokeBorder(Color.accentColor, lineWidth: 2)
-                                .background(Color.accentColor.opacity(0.15))
+                                .strokeBorder(Kerb.amber, lineWidth: 2)
+                                .background(Kerb.amber.opacity(0.14))
                                 .frame(width: box.width, height: box.height)
                                 .offset(x: box.minX, y: box.minY)
                                 .allowsHitTesting(false)
@@ -58,23 +57,30 @@ struct SignCropView: View {
                     .accessibilityHint("Drag to draw a box around one sign.")
                 }
 
-                Text(selection == nil ? "No box drawn yet." : "Ready to read the selection.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Text(selection == nil ? "No box drawn yet" : "Ready to read the selection")
+                    .kerbLabel(
+                        selection == nil ? Kerb.chalkFaint : Kerb.amber,
+                        style: .caption2
+                    )
             }
             .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Kerb.asphalt.ignoresSafeArea())
             .navigationTitle("Select the sign")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", action: onCancel)
+                        .foregroundStyle(Kerb.chalkDim)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Read selection") { confirm() }
                         .disabled(selection == nil)
+                        .foregroundStyle(Kerb.amber)
                 }
             }
         }
+        .preferredColorScheme(.dark)
     }
 
     private var selection: CGRect? {
