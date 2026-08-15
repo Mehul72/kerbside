@@ -45,9 +45,26 @@ public struct PanelSegmenter: Sendable {
         let claimedRegionIndices = Set(assigned.compactMap(\.regionIndex))
 
         var groups: [[AssignedLine]] = []
-        var current: [AssignedLine] = []
 
-        for item in assigned {
+        // Lines that sit on a detected face group by that face, never by their
+        // place in the reading order.
+        //
+        // A pole carries signs side by side as well as stacked, so sorting
+        // top to bottom braids two faces together: NO, NO, 5.30-9.30,
+        // STOPPING, 3.30-6.30, STOPPING. Walking that order and cutting when
+        // the face changes both merged neighbouring signs and tore single
+        // signs in half, which is how a panel came to be missing the day set
+        // that was severed from it.
+        let withFace = assigned.filter { $0.regionIndex != nil }
+        for index in Set(withFace.compactMap(\.regionIndex)).sorted() {
+            groups.append(withFace.filter { $0.regionIndex == index })
+        }
+
+        // Lines belonging to no detected face still group by vertical gap.
+        // There is no face to attribute them to, so reading order is the only
+        // evidence available.
+        var current: [AssignedLine] = []
+        for item in assigned where item.regionIndex == nil {
             if let previous = current.last,
                shouldSplit(
                    previousLine: previous.line,
