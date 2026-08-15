@@ -1,8 +1,76 @@
 {
-"note":"Liverpool NSW. NO STOPPING 6AM-10AM & 3PM-6PM MON-FRI pointing left, a symbolic no-parking sign carrying no text at all, 1P METER 10AM-3PM MON-FRI, and 1P 9AM-12:30PM SAT pointing left.",
-"panels":[
-{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":[{"start":"06:00","end":"10:00"},{"start":"15:00","end":"18:00"}],"direction":"left","qualifiers":[]},
-{"restriction":{"timeLimited":60},"days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":[{"start":"10:00","end":"15:00"}],"direction":"unspecified","qualifiers":["meter"]},
-{"restriction":{"timeLimited":60},"days":{"weekdays":["sat"],"publicHolidays":false},"times":[{"start":"09:00","end":"12:30"}],"direction":"left","qualifiers":[]}
-],
-"unknownCount":0}
+ "note": "Liverpool NSW. NO STOPPING 6AM-10AM & 3PM-6PM MON-FRI pointing left, a symbolic no-parking sign carrying no text at all, 1P METER 10AM-3PM MON-FRI, and 1P 9AM-12:30PM SAT pointing left.",
+ "knownIssue": "segmentation does not follow sign faces, so panels merge and split",
+ "panels": [
+  {
+   "restriction": "noStopping",
+   "days": {
+    "weekdays": [
+     "mon",
+     "tue",
+     "wed",
+     "thu",
+     "fri"
+    ],
+    "publicHolidays": false
+   },
+   "times": [
+    {
+     "start": "06:00",
+     "end": "10:00"
+    },
+    {
+     "start": "15:00",
+     "end": "18:00"
+    }
+   ],
+   "direction": "left",
+   "qualifiers": []
+  },
+  {
+   "restriction": {
+    "timeLimited": 60
+   },
+   "days": {
+    "weekdays": [
+     "mon",
+     "tue",
+     "wed",
+     "thu",
+     "fri"
+    ],
+    "publicHolidays": false
+   },
+   "times": [
+    {
+     "start": "10:00",
+     "end": "15:00"
+    }
+   ],
+   "direction": "unspecified",
+   "qualifiers": [
+    "meter"
+   ]
+  },
+  {
+   "restriction": {
+    "timeLimited": 60
+   },
+   "days": {
+    "weekdays": [
+     "sat"
+    ],
+    "publicHolidays": false
+   },
+   "times": [
+    {
+     "start": "09:00",
+     "end": "12:30"
+    }
+   ],
+   "direction": "left",
+   "qualifiers": []
+  }
+ ],
+ "unknownCount": 0
+}

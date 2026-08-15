@@ -88,6 +88,7 @@ public struct SignRecognizer: Sendable {
         let segmentedBlocks = segmenter.segment(observations, regions: regions)
         let blocks = PanelArrowDetector.annotate(
             segmentedBlocks,
+            regions: regions,
             in: prepared
         )
         guard !blocks.isEmpty else { throw SignVisionError.noTextFound }

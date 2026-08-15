@@ -30,6 +30,10 @@ struct ExpectedPanel: Codable, Hashable {
 
 struct VisionExpectation: Codable {
     var note: String?
+    /// Set only while a fixture is known to fail, saying why. The suite fails
+    /// if a fixture carrying this starts passing, so a fixed case cannot stay
+    /// quietly marked broken.
+    var knownIssue: String?
     var panels: [ExpectedPanel]
     /// Unknowns are counted, not described. The reason carries OCR text, which
     /// varies, but a panel that cannot be read must still never disappear.
@@ -85,15 +89,15 @@ struct VisionFixtureTests {
             let (sign, expected) = try await Self.read(name)
             let actual = sign.parsedPanels.map(ExpectedPanel.init)
 
-            // Known failing. Segmentation currently merges panels across sign
-            // faces and splits single faces apart, so a pole comes back either
-            // as one giant unknown or as panels missing the day set that was
-            // severed from them. Recorded rather than deleted: when
-            // segmentation is fixed this stops being a known issue and the
-            // suite says so.
-            await withKnownIssue("segmentation does not yet follow sign faces: \(name)") {
+            func check() {
                 #expect(actual == expected.panels, "\(name) panels")
                 #expect(sign.unknowns.count == expected.unknownCount, "\(name) unknown count")
+            }
+
+            if let issue = expected.knownIssue {
+                await withKnownIssue("\(name): \(issue)") { check() }
+            } else {
+                check()
             }
         }
     }

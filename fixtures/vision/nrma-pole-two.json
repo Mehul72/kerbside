@@ -1,8 +1,74 @@
 {
-"note":"Liverpool NSW. NO STOPPING pointing left with no hours, NO STOPPING 6:30-9:30AM and 3:30-6:30PM MON-FRI pointing right, 1P 9AM-12:30PM SAT pointing right, and 1P METER 9:30AM-3:30PM MON-FRI pointing right whose 30 MINUTES FREE sticker no classifier accepts.",
-"panels":[
-{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri","sat","sun"],"publicHolidays":true},"times":[{"start":"00:00","end":"24:00"}],"direction":"left","qualifiers":[]},
-{"restriction":"noStopping","days":{"weekdays":["mon","tue","wed","thu","fri"],"publicHolidays":false},"times":[{"start":"06:30","end":"09:30"},{"start":"15:30","end":"18:30"}],"direction":"right","qualifiers":[]},
-{"restriction":{"timeLimited":60},"days":{"weekdays":["sat"],"publicHolidays":false},"times":[{"start":"09:00","end":"12:30"}],"direction":"right","qualifiers":[]}
-],
-"unknownCount":1}
+ "note": "Liverpool NSW. NO STOPPING pointing left with no hours, NO STOPPING 6:30-9:30AM and 3:30-6:30PM MON-FRI pointing right, 1P 9AM-12:30PM SAT pointing right, and 1P METER 9:30AM-3:30PM MON-FRI pointing right whose 30 MINUTES FREE sticker no classifier accepts.",
+ "knownIssue": "segmentation does not follow sign faces, so panels merge and split",
+ "panels": [
+  {
+   "restriction": "noStopping",
+   "days": {
+    "weekdays": [
+     "mon",
+     "tue",
+     "wed",
+     "thu",
+     "fri",
+     "sat",
+     "sun"
+    ],
+    "publicHolidays": true
+   },
+   "times": [
+    {
+     "start": "00:00",
+     "end": "24:00"
+    }
+   ],
+   "direction": "left",
+   "qualifiers": []
+  },
+  {
+   "restriction": "noStopping",
+   "days": {
+    "weekdays": [
+     "mon",
+     "tue",
+     "wed",
+     "thu",
+     "fri"
+    ],
+    "publicHolidays": false
+   },
+   "times": [
+    {
+     "start": "06:30",
+     "end": "09:30"
+    },
+    {
+     "start": "15:30",
+     "end": "18:30"
+    }
+   ],
+   "direction": "right",
+   "qualifiers": []
+  },
+  {
+   "restriction": {
+    "timeLimited": 60
+   },
+   "days": {
+    "weekdays": [
+     "sat"
+    ],
+    "publicHolidays": false
+   },
+   "times": [
+    {
+     "start": "09:00",
+     "end": "12:30"
+    }
+   ],
+   "direction": "right",
+   "qualifiers": []
+  }
+ ],
+ "unknownCount": 1
+}

@@ -6,18 +6,30 @@ import Foundation
 /// Arrow evidence never participates in segmentation. A detection is attached
 /// only when one trusted physical face owns it; every ambiguous case is left
 /// unspecified.
+enum ArrowTrace {
+    /// Diagnostics only. Set KERBSIDE_ARROW_TRACE=1 to see why a candidate
+    /// shape was or was not taken for an arrow.
+    static let isOn = ProcessInfo.processInfo.environment["KERBSIDE_ARROW_TRACE"] == "1"
+}
+
 enum PanelArrowDetector {
-    static func annotate(_ blocks: [PanelBlock], in image: CGImage) -> [PanelBlock] {
+    /// Where a block's arrow may be looked for, and what colour surrounds it.
+    struct SearchFace {
+        var boundingBox: CGRect
+        var colour: PanelColourHint
+    }
+
+    static func annotate(
+        _ blocks: [PanelBlock],
+        regions: [PanelRegion] = [],
+        in image: CGImage
+    ) -> [PanelBlock] {
         guard let raster = ArrowRaster(image: image, maximumDimension: 768) else {
             return blocks
         }
 
-        let trustedIndices = blocks.indices.filter { index in
-            guard let region = blocks[index].sourceRegion else { return false }
-            guard region.colourEvidence.supportsStandalonePanel else { return false }
-            return region.colourHint == .red || region.colourHint == .green
-        }
-        guard !trustedIndices.isEmpty else { return blocks }
+        let faces = searchFaces(for: blocks, among: regions)
+        guard !faces.isEmpty else { return blocks }
 
         let textBoxes = blocks.flatMap { block in
             block.lines.compactMap { line in
@@ -26,13 +38,11 @@ enum PanelArrowDetector {
                     : nil
             }
         }
-        let observations = trustedIndices.flatMap { index in
-            guard let region = blocks[index].sourceRegion else {
-                return [ArrowObservation]()
-            }
+        let observations = faces.keys.sorted().flatMap { index -> [ArrowObservation] in
+            guard let face = faces[index] else { return [] }
             return raster.observations(
-                in: region.boundingBox,
-                panelColour: region.colourHint,
+                in: face.boundingBox,
+                panelColour: face.colour,
                 excluding: textBoxes
             )
         }
@@ -40,10 +50,12 @@ enum PanelArrowDetector {
 
         var evidence: [Int: [ArrowObservation]] = [:]
         for arrow in arrows {
-            let owners = trustedIndices.filter { index in
-                guard let region = blocks[index].sourceRegion else { return false }
-                return containment(of: arrow.boundingBox, in: region.boundingBox) >= 0.9
+            let owners = faces.keys.filter { index in
+                guard let face = faces[index] else { return false }
+                return containment(of: arrow.boundingBox, in: face.boundingBox) >= 0.9
             }
+            // Still exactly one owner or nothing. An arrow that several faces
+            // could claim says nothing about which kerb it scopes.
             guard owners.count == 1, let owner = owners.first else { continue }
             evidence[owner, default: []].append(arrow)
         }
@@ -68,6 +80,56 @@ enum PanelArrowDetector {
             }
         }
         return annotated
+    }
+
+    /// Chooses the area to search for each block's arrow.
+    ///
+    /// A trusted coloured rectangle is used as-is. Otherwise the block's own
+    /// plate is looked for: the *largest* candidate rectangle that still
+    /// encloses this block's text. Largest rather than tightest, because an
+    /// arrow sits below the words in the blank half of the plate, and the
+    /// tightest enclosing rectangle is usually the coloured band around the
+    /// text, which excludes exactly the area the arrow is in.
+    ///
+    /// On a pole of several signs the largest enclosing rectangle tends to be
+    /// shared, so every block claims the same arrow and ownership refuses it.
+    /// That is the intended outcome: no direction beats a guessed one.
+    static func searchFaces(
+        for blocks: [PanelBlock],
+        among regions: [PanelRegion]
+    ) -> [Int: SearchFace] {
+        var faces: [Int: SearchFace] = [:]
+
+        for index in blocks.indices {
+            if let region = blocks[index].sourceRegion,
+               region.colourEvidence.supportsStandalonePanel,
+               region.colourHint == .red || region.colourHint == .green {
+                faces[index] = SearchFace(
+                    boundingBox: region.boundingBox,
+                    colour: region.colourHint
+                )
+                continue
+            }
+
+            let text = blocks[index].boundingBox
+            guard text.width > 0, text.height > 0 else { continue }
+
+            let enclosing = regions.filter { region in
+                containment(of: text, in: region.boundingBox) >= 0.9
+                    && region.boundingBox.width * region.boundingBox.height
+                        > text.width * text.height * 1.2
+            }
+            guard let plate = enclosing.max(by: { lhs, rhs in
+                lhs.boundingBox.width * lhs.boundingBox.height
+                    < rhs.boundingBox.width * rhs.boundingBox.height
+            }) else { continue }
+
+            faces[index] = SearchFace(
+                boundingBox: plate.boundingBox,
+                colour: plate.colourHint
+            )
+        }
+        return faces
     }
 
     private static func deduplicate(
@@ -389,16 +451,47 @@ private struct ArrowRaster {
         let minimumPixels = max(12, interior.area / 2_000)
         let clearance = max(1, min(interior.width, interior.height) / 100)
 
+        func trace(_ verdict: String) {
+            guard ArrowTrace.isOn else { return }
+            FileHandle.standardError.write(Data("""
+                arrow candidate \(polarity) \
+                px=\(component.pixels.count)/\(minimumPixels) \
+                w=\(String(format: "%.3f", widthRatio)) \
+                h=\(String(format: "%.3f", heightRatio)) \
+                aspect=\(String(format: "%.2f", aspectRatio)) \
+                fill=\(String(format: "%.2f", fill)) \
+                -> \(verdict)\n
+                """.utf8))
+        }
+
         guard box.minimumX >= clearance,
               box.minimumY >= clearance,
               box.maximumX <= interior.width - clearance,
-              box.maximumY <= interior.height - clearance,
-              component.pixels.count >= minimumPixels,
-              (0.16...0.86).contains(widthRatio),
-              (0.035...0.30).contains(heightRatio),
-              (1.7...9).contains(aspectRatio),
-              (0.10...0.78).contains(fill)
-        else { return nil }
+              box.maximumY <= interior.height - clearance
+        else {
+            trace("rejected: touches the panel edge")
+            return nil
+        }
+        guard component.pixels.count >= minimumPixels else {
+            trace("rejected: too few pixels")
+            return nil
+        }
+        guard (0.16...0.86).contains(widthRatio) else {
+            trace("rejected: width ratio")
+            return nil
+        }
+        guard (0.035...0.30).contains(heightRatio) else {
+            trace("rejected: height ratio")
+            return nil
+        }
+        guard (1.7...9).contains(aspectRatio) else {
+            trace("rejected: aspect ratio")
+            return nil
+        }
+        guard (0.10...0.78).contains(fill) else {
+            trace("rejected: fill")
+            return nil
+        }
 
         let globalBounds = Bounds(
             minimumX: interior.minimumX + box.minimumX,
@@ -413,7 +506,10 @@ private struct ArrowRaster {
             panelColour: panelColour,
             excluding: excluded
         )
-        guard support >= 0.45 else { return nil }
+        guard support >= 0.45 else {
+            trace("rejected: surround support \(String(format: "%.2f", support))")
+            return nil
+        }
 
         let mask = normalizedMask(
             for: component,
@@ -422,8 +518,10 @@ private struct ArrowRaster {
             gridHeight: 24
         )
         guard let shape = classify(mask: mask, width: 48, height: 24) else {
+            trace("rejected: shape did not classify as an arrow")
             return nil
         }
+        trace("ACCEPTED as \(shape.direction)")
 
         return ArrowObservation(
             direction: shape.direction,
@@ -454,52 +552,70 @@ private struct ArrowRaster {
         return result
     }
 
+    /// Decides direction from the shape's thickness profile.
+    ///
+    /// Template matching was direction-blind here: a left arrow scored 0.726
+    /// and a right arrow 0.711 on the same pixels, a margin too small to mean
+    /// anything. What actually distinguishes an arrow is where the metal is.
+    /// Along its length a shaft is thin and even; an arrowhead swells to a
+    /// base and then tapers to a point at the very tip. Measuring that is both
+    /// direction-discriminating and blunt-object rejecting, which is exactly
+    /// the pair of decisions being made.
     private func classify(mask: [Bool], width: Int, height: Int) -> ShapeScore? {
+        func note(_ text: String) {
+            guard ArrowTrace.isOn else { return }
+            FileHandle.standardError.write(Data("    classify: \(text)\n".utf8))
+        }
+
         let symmetry = verticalSymmetry(of: mask, width: width, height: height)
+        note("symmetry \(String(format: "%.3f", symmetry)) (needs 0.55)")
         guard symmetry >= 0.55 else { return nil }
 
-        let left = bestTemplateScore(
-            mask: mask,
-            direction: .left,
-            width: width,
-            height: height
-        )
-        let right = bestTemplateScore(
-            mask: mask,
-            direction: .right,
-            width: width,
-            height: height
-        )
-        let bidirectional = bestTemplateScore(
-            mask: mask,
-            direction: .bidirectional,
-            width: width,
-            height: height
-        )
-        let ranked = [
-            ShapeScore(direction: .left, score: left),
-            ShapeScore(direction: .right, score: right),
-            ShapeScore(direction: .bidirectional, score: bidirectional),
-        ].sorted { lhs, rhs in
-            if lhs.score != rhs.score { return lhs.score > rhs.score }
-            return lhs.direction.rawValue < rhs.direction.rawValue
+        var thickness = [Float](repeating: 0, count: width)
+        for x in 0..<width {
+            var count = 0
+            for y in 0..<height where mask[y * width + x] { count += 1 }
+            thickness[x] = Float(count)
         }
-        guard let best = ranked.first, ranked.count > 1 else { return nil }
-        let minimumMargin: Float = best.direction == .bidirectional ? 0.04 : 0.06
-        guard
-              best.score >= 0.42,
-              best.score - ranked[1].score >= minimumMargin,
-              geometrySupports(
-                  best.direction,
-                  mask: mask,
-                  width: width,
-                  height: height
-              )
-        else { return nil }
+        guard thickness.contains(where: { $0 > 0 }) else { return nil }
 
+        let headSpan = max(2, width * 25 / 100)
+        let tipSpan = max(1, width * 8 / 100)
+        let middle = Array(thickness[(width * 40 / 100)..<(width * 60 / 100)])
+        let shaft = middle.reduce(0, +) / Float(max(1, middle.count))
+        guard shaft > 0 else { return nil }
+
+        let leftBase = thickness[0..<headSpan].max() ?? 0
+        let leftTip = thickness[0..<tipSpan].reduce(0, +) / Float(tipSpan)
+        let rightBase = thickness[(width - headSpan)..<width].max() ?? 0
+        let rightTip = thickness[(width - tipSpan)..<width].reduce(0, +) / Float(tipSpan)
+
+        // A head is wider than the shaft it sits on and narrows to a point.
+        // The taper is what separates an arrowhead from a squared-off end cap.
+        func isHead(base: Float, tip: Float) -> Bool {
+            base >= shaft * 1.5 && tip <= base * 0.65
+        }
+
+        let pointsLeft = isHead(base: leftBase, tip: leftTip)
+        let pointsRight = isHead(base: rightBase, tip: rightTip)
+        note("shaft \(String(format: "%.2f", shaft)) "
+            + "left base \(String(format: "%.2f", leftBase)) tip \(String(format: "%.2f", leftTip)) -> \(pointsLeft) "
+            + "right base \(String(format: "%.2f", rightBase)) tip \(String(format: "%.2f", rightTip)) -> \(pointsRight)")
+
+        let direction: VisualDirection
+        switch (pointsLeft, pointsRight) {
+        case (true, true): direction = .bidirectional
+        case (true, false): direction = .left
+        case (false, true): direction = .right
+        case (false, false): return nil
+        }
+
+        let swell = max(pointsLeft ? leftBase : 0, pointsRight ? rightBase : 0) / shaft
+        let confidence = min(Float(1), (swell - 1) / 2)
+        note("ACCEPTED \(direction) confidence \(String(format: "%.3f", confidence))")
         return ShapeScore(
-            direction: best.direction,
-            score: best.score * 0.75 + symmetry * 0.25
+            direction: direction,
+            score: confidence * 0.75 + symmetry * 0.25
         )
     }
 
