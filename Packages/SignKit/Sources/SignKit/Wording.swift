@@ -30,7 +30,9 @@ public enum Wording {
         }
     }
 
-    static func duration(_ minutes: Int) -> String {
+    /// Public because an allowance is named outside SignKit too: a countdown
+    /// has to be able to say which allowance it is counting.
+    public static func duration(_ minutes: Int) -> String {
         let hours = minutes / 60
         let remainder = minutes % 60
         switch (hours, remainder) {
