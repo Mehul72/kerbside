@@ -104,6 +104,15 @@ enum PanelArrowDetector {
         for index in blocks.indices {
             var best: SearchFace?
 
+            // A detector-backed colourless child (for example an information
+            // sticker inside a parking plate) is a real separate result, but
+            // it must not claim the parent plate's arrow.
+            if let source = blocks[index].sourceRegion,
+               source.colourHint != .red,
+               source.colourHint != .green {
+                continue
+            }
+
             // A trusted coloured rectangle is good evidence of a real face, but
             // on a sign whose top half is a coloured banner it describes only
             // that banner. It is a candidate, not the answer.
@@ -502,10 +511,12 @@ private struct ArrowRaster {
                 """.utf8))
         }
 
-        guard box.minimumX >= clearance,
-              box.minimumY >= clearance,
-              box.maximumX <= interior.width - clearance,
-              box.maximumY <= interior.height - clearance
+        let touchesLeft = box.minimumX < clearance
+        let touchesRight = box.maximumX > interior.width - clearance
+        guard box.minimumY >= clearance,
+              box.maximumY <= interior.height - clearance,
+              !(touchesLeft && touchesRight),
+              (!(touchesLeft || touchesRight) || widthRatio <= 0.95)
         else {
             trace("rejected: touches the panel edge")
             return nil
@@ -610,8 +621,12 @@ private struct ArrowRaster {
         }
 
         let symmetry = verticalSymmetry(of: mask, width: width, height: height)
-        note("symmetry \(String(format: "%.3f", symmetry)) (needs 0.55)")
-        guard symmetry >= 0.55 else { return nil }
+        // Perspective, glare and mounting bolts remove a sizeable portion of
+        // one half of arrows in field photos. Direction still requires the
+        // independent tapered-head test below, so symmetry is only a weak
+        // rejection gate rather than proof by itself.
+        note("symmetry \(String(format: "%.3f", symmetry)) (needs 0.30)")
+        guard symmetry >= 0.30 else { return nil }
 
         var thickness = [Float](repeating: 0, count: width)
         for x in 0..<width {

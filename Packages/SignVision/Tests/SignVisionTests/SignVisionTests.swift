@@ -402,10 +402,31 @@ struct PanelSegmenterTests {
 
         let sign = SignVision.assemble(blocks)
 
-        #expect(SignVision.pipelineVersion == 4)
+        #expect(SignVision.pipelineVersion == 5)
         #expect(sign.parsedPanels.count == 1)
         #expect(sign.unknowns.count == 1)
         #expect(sign.unknowns.first?.rawText == "LOADING ZONE")
+    }
+
+    @Test("fragmented plate OCR is repaired without changing raw evidence")
+    func fragmentedOCRRepair() {
+        let raw = "NO\n630-930\nSTOPPING\n330-630\nPM\nMON - FRI"
+        let repaired = OCRTextRepair.apply(to: [block(raw, y: 0.8)])[0]
+
+        #expect(repaired.rawText == raw)
+        #expect(repaired.parserTextOverride == "NO STOPPING\n630AM-930AM\n330PM-630PM\nMON - FRI")
+        let sign = SignVision.assemble([repaired])
+        #expect(sign.parsedPanels.count == 1)
+        #expect(sign.parsedPanels[0].rawText == raw)
+    }
+
+    @Test("a detached PM completes a partially marked time range")
+    func detachedEndMeridiemRepair() {
+        let raw = "1P\n9AM-1230\nPM\nSAT"
+        let repaired = OCRTextRepair.apply(to: [block(raw, y: 0.8)])[0]
+
+        #expect(repaired.parserTextOverride == "1P\n9AM-1230PM\nSAT")
+        #expect(SignVision.assemble([repaired]).parsedPanels.count == 1)
     }
 
     @Test("visual direction fills only missing parsed direction")

@@ -361,6 +361,9 @@ struct PanelFaceDetector {
         lines: [TextObservation]
     ) -> PanelColourHint {
         let words = lineIndices.map { lines[$0].text.uppercased() }.joined(separator: " ")
+        if words.contains("MINUTES FREE") || words.contains("ENTER NUMBER") {
+            return .none
+        }
         if words.contains("NO STOP") || words.contains("NO PARK") { return .red }
         if words.contains("METER")
             || words.range(of: #"\b\d+\s*P\b"#, options: .regularExpression) != nil {

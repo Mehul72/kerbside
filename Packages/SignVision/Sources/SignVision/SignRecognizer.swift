@@ -105,10 +105,12 @@ public struct SignRecognizer: Sendable {
                 plateDetection.regions,
                 in: prepared
             )
-            let blocks = PanelArrowDetector.annotate(
-                segmentedBlocks,
-                regions: plateDetection.regions,
-                in: prepared
+            let blocks = OCRTextRepair.apply(
+                to: PanelArrowDetector.annotate(
+                    segmentedBlocks,
+                    regions: plateDetection.regions,
+                    in: prepared
+                )
             )
             guard !blocks.isEmpty else { throw SignVisionError.noTextFound }
             return SignReading(
@@ -130,10 +132,12 @@ public struct SignRecognizer: Sendable {
             )
         }
         let segmentedBlocks = segmenter.segment(observations, regions: regions)
-        let blocks = PanelArrowDetector.annotate(
-            segmentedBlocks,
-            regions: regions,
-            in: prepared
+        let blocks = OCRTextRepair.apply(
+            to: PanelArrowDetector.annotate(
+                segmentedBlocks,
+                regions: regions,
+                in: prepared
+            )
         )
         guard !blocks.isEmpty else { throw SignVisionError.noTextFound }
 
