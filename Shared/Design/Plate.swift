@@ -18,6 +18,11 @@ struct Plate<Content: View>: View {
     /// Unread plates are outlined rather than ruled, which says the boundary
     /// of the panel is known but its contents are not.
     var dashed: Bool = false
+    /// A widget has far less room than a screen, so a plate can be drawn
+    /// smaller. Everything else about it is unchanged, because a plate that
+    /// changed its proportions in a widget would stop reading as the same
+    /// object.
+    var width: CGFloat = Kerb.plateWidth
     @ViewBuilder var content: () -> Content
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -41,7 +46,7 @@ struct Plate<Content: View>: View {
                         .allowsHitTesting(false)
                 }
             }
-            .frame(width: Kerb.plateWidth)
+            .frame(width: width)
             .shadow(color: .black.opacity(0.55), radius: 18, y: 10)
             .shadow(
                 color: lit ? Color.white.opacity(0.16) : .clear,
