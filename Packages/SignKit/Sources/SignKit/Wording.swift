@@ -103,6 +103,18 @@ public enum Wording {
         }
     }
 
+    /// What to say when a panel named no direction.
+    ///
+    /// An arrow scopes a panel to one stretch of kerb, so a missing one is a
+    /// gap in the reading rather than a detail worth omitting. Saying nothing
+    /// leaves a reader unable to tell an unread arrow from a sign that never
+    /// had one, which is the same silent guess the invariants forbid.
+    public static func missingDirectionNote(_ direction: Direction) -> String? {
+        direction == .unspecified
+            ? "No arrow was read, so which side of the sign this covers is unknown."
+            : nil
+    }
+
     public static func describe(_ qualifier: Qualifier) -> String {
         switch qualifier {
         case .ticket: "ticket required"

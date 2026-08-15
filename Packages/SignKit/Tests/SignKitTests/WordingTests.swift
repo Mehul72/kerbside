@@ -66,6 +66,13 @@ struct WordingTests {
         #expect(Wording.describe(Restriction.timeLimited(minutes: 90)) == "1 hour 30 minute parking")
     }
 
+    @Test("a missing arrow is stated, not left silent")
+    func missingDirection() {
+        #expect(Wording.missingDirectionNote(.unspecified) != nil)
+        #expect(Wording.missingDirectionNote(.left) == nil)
+        #expect(Wording.missingDirectionNote(.both) == nil)
+    }
+
     @Test("an unknown says what defeated it")
     func unknowns() throws {
         let sign = Parser.parse("2P\n8AM - 6PM\nWOMBAT CROSSING")

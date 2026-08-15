@@ -224,6 +224,11 @@ private struct PanelRow: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(Wording.describe(panel))
                 .font(.headline)
+            if let note = Wording.missingDirectionNote(panel.direction) {
+                Text(note)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
             Text(panel.rawText)
                 .font(.footnote.monospaced())
                 .foregroundStyle(.secondary)
