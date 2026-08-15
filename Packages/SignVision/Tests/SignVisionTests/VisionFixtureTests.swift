@@ -93,14 +93,13 @@ struct VisionFixtureTests {
             let sign = reading.sign
             let actual = sign.parsedPanels.map(ExpectedPanel.init)
 
-            if let expectedArrows = expected.arrows {
-                let found = reading.blocks.compactMap { $0.visualDirection?.rawValue }
-                #expect(found == expectedArrows, "\(name) arrows")
-            }
-
             func check() {
                 #expect(actual == expected.panels, "\(name) panels")
                 #expect(sign.unknowns.count == expected.unknownCount, "\(name) unknown count")
+                if let expectedArrows = expected.arrows {
+                    let found = reading.blocks.compactMap { $0.visualDirection?.rawValue }
+                    #expect(found == expectedArrows, "\(name) arrows")
+                }
             }
 
             if let issue = expected.knownIssue {

@@ -135,11 +135,35 @@ enum PanelArrowDetector {
                         colour: plate.colourHint
                     )
                 }
+
+                // Last resort, the block's own extent. On a tilted sign Vision
+                // returns the arrow as a stray character, which swells the
+                // block to the size of the plate and leaves no rectangle
+                // bigger than it. That block box is the plate, so search it
+                // rather than giving up on the sign entirely.
+                //
+                // Only when the photograph holds a single block. On a pole this
+                // would hand overlapping faces to several blocks, and an arrow
+                // that two faces can claim gets refused rather than assigned.
+                if blocks.count == 1,
+                   best.map({ area(text) > area($0.boundingBox) }) ?? true {
+                    best = SearchFace(
+                        boundingBox: text,
+                        colour: blocks[index].colourHint
+                    )
+                }
             }
 
             // The widest enclosing face wins. An arrow lives in the blank half
             // of the plate, below the words, so searching anything smaller than
             // the whole face looks everywhere except where the arrow is.
+            if ArrowTrace.isOn {
+                let text = blocks[index].boundingBox
+                let chosen = best.map { "\($0.boundingBox)" } ?? "NO FACE FOUND"
+                let line = "face for block \(index): \(chosen)  text \(text)  "
+                    + "candidates \(regions.count)\n"
+                FileHandle.standardError.write(Data(line.utf8))
+            }
             if let best { faces[index] = best }
         }
         return faces

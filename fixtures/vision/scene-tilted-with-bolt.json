@@ -1,0 +1,33 @@
+{
+ "note": "The same plate tilted 3.5 degrees with a mounting bolt across the arrow. The bolt breaks the shaft into two pieces and the tilt sets them at different heights, so neither the shape tests nor the rejoin rule recover the arrow. Kept because a photographed sign is never perfectly level and always bolted.",
+ "knownIssue": "a tilted sign whose arrow is broken by a bolt is not read",
+ "panels": [
+  {
+   "restriction": "noStopping",
+   "days": {
+    "weekdays": [
+     "mon",
+     "tue",
+     "wed",
+     "thu",
+     "fri",
+     "sat",
+     "sun"
+    ],
+    "publicHolidays": true
+   },
+   "times": [
+    {
+     "start": "00:00",
+     "end": "24:00"
+    }
+   ],
+   "direction": "left",
+   "qualifiers": []
+  }
+ ],
+ "unknownCount": 0,
+ "arrows": [
+  "left"
+ ]
+}
