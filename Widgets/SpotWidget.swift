@@ -173,8 +173,12 @@ struct SpotWidgetView: View {
                     CountdownRing(progress: reading.progress, urgent: reading.urgent, lineWidth: 7)
                     // Held inside the ring's bore. A long figure such as
                     // 1:58:16 shrinks to fit rather than crossing the stroke.
-                    CountdownFigure(expiry: reading.expiry, now: entry.date, size: 18)
-                        .frame(width: 58)
+                    VStack(spacing: 0) {
+                        CountdownFigure(expiry: reading.expiry, now: entry.date, size: 18)
+                            .frame(width: 58)
+                        Text(reading.overrun ? "over" : "left")
+                            .kerbLabel(Kerb.chalkDim, style: .caption2)
+                    }
                 }
                 .frame(width: 82, height: 82)
 

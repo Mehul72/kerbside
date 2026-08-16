@@ -8,28 +8,38 @@ import SwiftUI
 /// answer "where did I leave it on Tuesday" without turning the app into a
 /// diary of somebody's movements.
 struct PastSpotsView: View {
-    let record: ParkingRecord
+    @ObservedObject var controller: ParkingController
     @Environment(\.dismiss) private var dismiss
+    @State private var isClearing = false
 
     private let timeZone = SharedContainer.timeZone
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(record.past) { spot in
-                        Row(spot: spot, timeZone: timeZone)
-                    }
-
-                    if record.past.isEmpty {
-                        Text("No spots yet.")
-                            .font(Kerb.voice())
-                            .foregroundStyle(Kerb.chalkDim)
-                            .padding(.top, 60)
+            List {
+                ForEach(controller.record.past) { spot in
+                    Row(spot: spot, timeZone: timeZone)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                }
+                .onDelete { offsets in
+                    for index in offsets {
+                        controller.forget(controller.record.past[index].id)
                     }
                 }
-                .padding(22)
+
+                if controller.record.past.isEmpty {
+                    Text("No spots yet.")
+                        .font(Kerb.voice())
+                        .foregroundStyle(Kerb.chalkDim)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .padding(.top, 60)
+                }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .background(Kerb.asphalt)
             .navigationTitle("Past spots")
             .navigationBarTitleDisplayMode(.inline)
@@ -37,6 +47,22 @@ struct PastSpotsView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    if !controller.record.past.isEmpty {
+                        Button("Clear") { isClearing = true }
+                            .accessibilityIdentifier("clear-history")
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Forget every past spot?",
+                isPresented: $isClearing,
+                titleVisibility: .visible
+            ) {
+                Button("Forget them", role: .destructive) { controller.forgetPast() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Where the car is now is kept. This cannot be undone.")
             }
         }
         .preferredColorScheme(.dark)

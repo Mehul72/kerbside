@@ -41,6 +41,9 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.au.kerbside
+        # A parking limit running out is the definition of time sensitive, and
+        # without this a reminder is buried by Focus at exactly the wrong moment.
+        com.apple.developer.usernotifications.time-sensitive: true
     info:
       path: App/Info.plist
       properties:
@@ -50,6 +53,11 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        # Tapping a widget or the Lock Screen banner opens the walk back.
+        CFBundleURLTypes:
+          - CFBundleURLName: au.kerbside
+            CFBundleURLSchemes:
+              - kerbside
         # The Lock Screen banner and the Dynamic Island.
         NSSupportsLiveActivities: true
         NSSupportsLiveActivitiesFrequentUpdates: true
@@ -64,6 +72,7 @@ targets:
       base:
         PRODUCT_NAME: Kerbside
         PRODUCT_BUNDLE_IDENTIFIER: au.kerbside.Kerbside
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     scheme:
       testTargets:
         - KerbsideUITests

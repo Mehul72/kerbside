@@ -13,6 +13,7 @@ struct ParkedView: View {
     @Binding var route: HomeView.Route?
 
     @State private var isEditingLimit = false
+    @State private var isCollecting = false
     @State private var note = ""
     @State private var reminders: ParkingController.ReminderState = .on
     @FocusState private var noteFocused: Bool
@@ -42,6 +43,17 @@ struct ParkedView: View {
         .sheet(isPresented: $isEditingLimit) {
             LimitSheet(controller: controller)
                 .presentationDetents([.medium, .large])
+        }
+        .confirmationDialog(
+            "Finished with this spot?",
+            isPresented: $isCollecting,
+            titleVisibility: .visible
+        ) {
+            Button("I'm back at the car") { controller.collect() }
+                .accessibilityIdentifier("collect-confirm")
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The spot moves to your past spots and the countdown stops.")
         }
         .task {
             note = controller.spot?.note ?? ""
@@ -264,15 +276,10 @@ struct ParkedView: View {
         VStack(spacing: 12) {
             Button("I'm back at the car") {
                 noteFocused = false
-                controller.collect()
+                isCollecting = true
             }
             .buttonStyle(PlateButton(kind: .enamel))
             .accessibilityIdentifier("collect")
-
-            if controller.spot?.sign == nil {
-                Button("Read the sign") { route = .reader }
-                    .buttonStyle(PlateButton(kind: .outlined))
-            }
 
             switch reminders {
             case .on:

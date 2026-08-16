@@ -98,6 +98,42 @@ struct SpotStoreTests {
         #expect(record == .empty)
     }
 
+    @Test("a past spot can be forgotten")
+    func forgettingOne() {
+        var record = ParkingRecord.empty
+        record.park(Self.fullSpot)
+        let second = ParkingSpot(parkedAt: Clock.sydney(2026, 8, 20, 9))
+        record.park(second)
+        record.collect(at: Clock.sydney(2026, 8, 20, 11))
+
+        #expect(record.past.count == 2)
+        record.forget(Self.fullSpot.id)
+        #expect(record.past.count == 1)
+        #expect(record.past[0].id == second.id)
+    }
+
+    @Test("forgetting the past keeps the car that is parked now")
+    func forgettingAllKeepsTheActiveCar() {
+        var record = ParkingRecord.empty
+        record.park(Self.fullSpot)
+        let current = ParkingSpot(parkedAt: Clock.sydney(2026, 8, 20, 9))
+        record.park(current)
+
+        record.forgetPast()
+
+        #expect(record.past.isEmpty)
+        #expect(record.active?.id == current.id, "the car parked now is not history")
+    }
+
+    @Test("forgetting a spot that is not there changes nothing")
+    func forgettingAnUnknownSpot() {
+        var record = ParkingRecord.empty
+        record.park(Self.fullSpot)
+        record.collect(at: Clock.sydney(2026, 8, 19, 14))
+        record.forget(UUID())
+        #expect(record.past.count == 1)
+    }
+
     @Test("the tail of past spots stays short enough for a widget to read")
     func pastIsCapped() {
         var record = ParkingRecord.empty

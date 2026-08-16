@@ -103,6 +103,19 @@ public struct ParkingRecord: Hashable, Sendable, Codable {
         active = nil
     }
 
+    /// Forgets one past spot.
+    ///
+    /// A record of where somebody has left their car is a record of where they
+    /// have been, so it has to be possible to remove one. Only the past can be
+    /// forgotten: the car that is parked now is deliberately harder to lose.
+    public mutating func forget(_ id: UUID) {
+        past.removeAll { $0.id == id }
+    }
+
+    public mutating func forgetPast() {
+        past.removeAll()
+    }
+
     private mutating func retire(_ spot: ParkingSpot, at instant: Date) {
         var collected = spot
         collected.collectedAt = instant

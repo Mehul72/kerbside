@@ -12,6 +12,7 @@ import UIKit
 struct HomeView: View {
     @StateObject private var controller = ParkingController()
     @State private var route: Route?
+    @State private var isIntroducing = FirstRunView.shouldShow
     @Environment(\.scenePhase) private var scenePhase
 
     enum Route: Hashable, Identifiable {
@@ -35,6 +36,7 @@ struct HomeView: View {
             .considerate(Kerb.Motion.arrive, value: controller.isParked)
         }
         .preferredColorScheme(.dark)
+        .fullScreenCover(isPresented: $isIntroducing) { FirstRunView() }
         .sheet(item: $route) { destination in
             switch destination {
             case .reader:
@@ -48,7 +50,7 @@ struct HomeView: View {
             case .walkBack:
                 ReturnView(controller: controller)
             case .past:
-                PastSpotsView(record: controller.record)
+                PastSpotsView(controller: controller)
             }
         }
         .alert(
@@ -62,11 +64,24 @@ struct HomeView: View {
         } message: {
             Text(controller.failure ?? "")
         }
+        .onOpenURL { url in
+            // Everything outside the app — a widget, the Lock Screen banner,
+            // the Dynamic Island — points here. The walk back is what somebody
+            // tapping one of those is almost always after, so long as there is
+            // a place to walk to.
+            guard url.scheme == "kerbside" else { return }
+            controller.reload()
+            route = controller.spot?.coordinate == nil ? nil : .walkBack
+        }
         .onChange(of: scenePhase) { _, phase in
             // A widget tap or a Live Activity can change nothing, but time
             // passes while the app is away and the sign may now read
             // differently. Re-reading on return costs one file read.
-            if phase == .active { controller.reload() }
+            guard phase == .active else { return }
+            controller.reload()
+            // Time passed and the car may be further away than it was, so the
+            // distance is asked for again rather than left as it was found.
+            Task { await controller.refreshHere() }
         }
     }
 

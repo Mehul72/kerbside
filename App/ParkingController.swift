@@ -45,6 +45,7 @@ final class ParkingController: ObservableObject {
         // so it needs a way to start from nothing. Nothing else passes this.
         if ProcessInfo.processInfo.arguments.contains("-kerbside-reset") {
             try? store.save(.empty)
+            FirstRunView.markSeen()
         }
 
         // Distance and bearing are read through this object but computed from
@@ -178,6 +179,18 @@ final class ParkingController: ObservableObject {
             spot.photoFilename = filename
         }
         replaceActive(with: spot)
+    }
+
+    /// Forgets a past spot, and the photograph that went with it. A row that
+    /// disappeared while its picture stayed on disk would not be forgetting.
+    func forget(_ id: UUID) {
+        record.forget(id)
+        commit(now: Date())
+    }
+
+    func forgetPast() {
+        record.forgetPast()
+        commit(now: Date())
     }
 
     private func replaceActive(with spot: ParkingSpot) {

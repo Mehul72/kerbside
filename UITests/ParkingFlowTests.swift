@@ -54,6 +54,15 @@ final class ParkingFlowTests: XCTestCase {
 
         collect.tap()
 
+        // Ending a stay is irreversible, so it asks first.
+        // SwiftUI puts the dialog's button in the tree more than once.
+        let confirm = app.buttons["collect-confirm"].firstMatch
+        XCTAssertTrue(
+            confirm.waitForExistence(timeout: 5),
+            "ending a stay should ask before it happens"
+        )
+        confirm.tap()
+
         XCTAssertTrue(
             app.buttons["park"].waitForExistence(timeout: 10),
             "collecting the car should return to the empty home"
@@ -115,6 +124,35 @@ final class ParkingFlowTests: XCTestCase {
         try? FileManager.default.createDirectory(at: shots, withIntermediateDirectories: true)
         try? screenshot.pngRepresentation.write(
             to: shots.appendingPathComponent("\(name).png")
+        )
+    }
+}
+
+/// The one screen shown before the app is used.
+@MainActor
+final class IntroductionTests: XCTestCase {
+
+    func testTheAppSaysWhatItWillNotDo() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-kerbside-reset", "YES", "-kerbside-intro", "YES"]
+        app.launch()
+
+        let start = app.buttons["intro-start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10), "the introduction should be shown")
+
+        // The disclaimer is the point of the screen, so it is asserted rather
+        // than left to survive by accident.
+        XCTAssertTrue(
+            app.staticTexts.containing(
+                NSPredicate(format: "label CONTAINS[c] %@", "only authority")
+            ).firstMatch.exists,
+            "the introduction must say the sign is the authority"
+        )
+
+        start.tap()
+        XCTAssertTrue(
+            app.buttons["park"].waitForExistence(timeout: 10),
+            "starting should land on the home screen"
         )
     }
 }
