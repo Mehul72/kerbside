@@ -1,6 +1,7 @@
 import ParkKit
 import SignKit
 import SwiftUI
+import UIKit
 
 /// Home with a car saved.
 ///
@@ -13,7 +14,7 @@ struct ParkedView: View {
 
     @State private var isEditingLimit = false
     @State private var note = ""
-    @State private var remindersOn = false
+    @State private var reminders: ParkingController.ReminderState = .on
     @FocusState private var noteFocused: Bool
 
     private let timeZone = SharedContainer.timeZone
@@ -44,7 +45,7 @@ struct ParkedView: View {
         }
         .task {
             note = controller.spot?.note ?? ""
-            remindersOn = await controller.remindersAuthorised()
+            reminders = await controller.reminderState()
             await controller.refreshHere()
         }
     }
@@ -273,11 +274,30 @@ struct ParkedView: View {
                     .buttonStyle(PlateButton(kind: .outlined))
             }
 
-            if !remindersOn {
+            switch reminders {
+            case .on:
+                EmptyView()
+
+            case .off:
                 Button("Turn on reminders") {
-                    Task { remindersOn = await controller.requestReminders() }
+                    Task {
+                        _ = await controller.requestReminders()
+                        reminders = await controller.reminderState()
+                    }
                 }
                 .kerbLabel(Kerb.chalkDim, style: .footnote)
+                .accessibilityIdentifier("reminders")
+                .padding(.top, 4)
+
+            case .refused:
+                // iOS will not ask twice, so offering the ask again would be a
+                // button that does nothing. Settings is the only way back.
+                Button("Reminders are off · open Settings") {
+                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                    UIApplication.shared.open(url)
+                }
+                .kerbLabel(Kerb.chalkDim, style: .footnote)
+                .accessibilityIdentifier("reminders-settings")
                 .padding(.top, 4)
             }
         }

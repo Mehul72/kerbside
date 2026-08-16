@@ -188,10 +188,26 @@ final class ParkingController: ObservableObject {
 
     // MARK: - Permissions
 
+    /// What can be said about reminders right now.
+    ///
+    /// Refused is held apart from not-yet-asked because iOS will not show the
+    /// prompt a second time. A button that silently does nothing is worse than
+    /// no button, so the interface sends a refused person to Settings instead
+    /// of offering an ask that cannot happen.
+    enum ReminderState {
+        case on
+        case off
+        case refused
+    }
+
     /// Checks without asking. Permission is requested when somebody turns
     /// reminders on, not when a screen happens to appear.
-    func remindersAuthorised() async -> Bool {
-        await reminders.authorisationStatus() == .authorized
+    func reminderState() async -> ReminderState {
+        switch await reminders.authorisationStatus() {
+        case .authorized, .provisional, .ephemeral: .on
+        case .denied: .refused
+        default: .off
+        }
     }
 
     func requestReminders() async -> Bool {
