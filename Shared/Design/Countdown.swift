@@ -147,7 +147,10 @@ struct CountdownReading {
     var urgent: Bool
     var overrun: Bool
 
-    /// Under this much left, the ring starts to breathe.
+    /// Under this much left, the ring starts to breathe — but never for more
+    /// than the last quarter of the allowance. A quarter of an hour is the end
+    /// of a two hour stay and the whole of a fifteen minute one, and a ring
+    /// that breathes from the moment it is set is just a ring that breathes.
     static let urgentSeconds: TimeInterval = 15 * 60
 
     init(limit: ParkingLimit, now: Date) {
@@ -155,6 +158,8 @@ struct CountdownReading {
         progress = limit.progress(at: now) ?? 0
         let remaining = limit.remaining(at: now)
         overrun = (remaining ?? 1) < 0
-        urgent = remaining.map { $0 >= 0 && $0 <= Self.urgentSeconds } ?? false
+
+        let threshold = min(Self.urgentSeconds, (limit.span ?? 0) * 0.25)
+        urgent = remaining.map { $0 >= 0 && $0 <= threshold } ?? false
     }
 }

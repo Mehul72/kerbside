@@ -100,6 +100,7 @@ struct ParkedView: View {
                             now: context.date,
                             size: 40
                         )
+                        .frame(width: 150)
                         Text(caption(for: reading))
                             .kerbLabel(Kerb.chalkDim, style: .caption2)
                     }

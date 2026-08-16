@@ -24,17 +24,34 @@ struct SpotProvider: TimelineProvider {
         completion(entry(at: .now))
     }
 
-    /// Entries are placed where the display actually changes rather than on a
-    /// clock: the falling number draws itself, so the only moments worth
-    /// waking for are when an allowance becomes urgent and when it runs out.
+    /// How many times the ring is redrawn across an allowance.
+    ///
+    /// A timeline may carry many entries for the cost of one refresh — the
+    /// budget is on how often the provider is asked, not on how much it
+    /// returns — so the ring can be stepped finely without waking the app.
+    private static let steps = 60
+
+    /// The falling number redraws itself, because the system draws it from an
+    /// expiry. The ring does not: it is a shape, and a shape only changes when
+    /// the system moves to another entry. Handing over one entry would freeze
+    /// the ring at the moment the timeline was built and let it drift further
+    /// from the truth every minute, so the allowance is stepped across.
     func getTimeline(in context: Context, completion: @escaping (Timeline<SpotEntry>) -> Void) {
         let now = Date.now
         let current = entry(at: now)
         var dates: [Date] = []
 
         if let expiry = current.spot?.limit.expiry {
-            let urgent = expiry.addingTimeInterval(-CountdownReading.urgentSeconds)
-            if urgent > now { dates.append(urgent) }
+            let span = current.spot?.limit.span ?? 0
+            // Never finer than a minute: a ring that moves less than a
+            // sixtieth of a turn is not worth an entry.
+            let step = max(60, span / Double(Self.steps))
+            var at = now.addingTimeInterval(step)
+            while at < expiry, dates.count < Self.steps {
+                dates.append(at)
+                at = at.addingTimeInterval(step)
+            }
+            // The moment it runs out, when the figure turns and counts up.
             if expiry > now { dates.append(expiry) }
         }
         // A backstop, so a widget left alone all day still refreshes.
@@ -154,7 +171,10 @@ struct SpotWidgetView: View {
             if let spot = entry.spot, let reading {
                 ZStack {
                     CountdownRing(progress: reading.progress, urgent: reading.urgent, lineWidth: 7)
-                    CountdownFigure(expiry: reading.expiry, now: entry.date, size: 20)
+                    // Held inside the ring's bore. A long figure such as
+                    // 1:58:16 shrinks to fit rather than crossing the stroke.
+                    CountdownFigure(expiry: reading.expiry, now: entry.date, size: 18)
+                        .frame(width: 58)
                 }
                 .frame(width: 82, height: 82)
 

@@ -89,7 +89,8 @@ private struct LockScreenBanner: View {
         HStack(spacing: 14) {
             ZStack {
                 CountdownRing(progress: progress, urgent: urgent, lineWidth: 6)
-                CountdownFigure(expiry: context.state.expiry, now: .now, size: 17)
+                CountdownFigure(expiry: context.state.expiry, now: .now, size: 16)
+                    .frame(width: 48)
             }
             .frame(width: 68, height: 68)
 

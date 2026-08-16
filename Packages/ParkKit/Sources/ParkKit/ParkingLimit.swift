@@ -61,6 +61,12 @@ public enum ParkingLimit: Hashable, Sendable, Codable {
         return expiry.addingTimeInterval(-Double(source.minutes) * 60)
     }
 
+    /// How long the allowance runs for, in seconds.
+    public var span: TimeInterval? {
+        guard case .expires(_, let source) = self, source.minutes > 0 else { return nil }
+        return Double(source.minutes) * 60
+    }
+
     /// How far through the allowance a given instant is, in `0...1`.
     ///
     /// Measured against the allowance's own span, so a ring drawn from this
