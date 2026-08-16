@@ -85,9 +85,7 @@ struct ParkedView: View {
     private var countdown: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let spot = controller.spot
-            let reading = spot.map {
-                CountdownReading(limit: $0.limit, parkedAt: $0.parkedAt, now: context.date)
-            }
+            let reading = spot.map { CountdownReading(limit: $0.limit, now: context.date) }
 
             VStack(spacing: 16) {
                 ZStack {

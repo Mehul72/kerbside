@@ -68,19 +68,27 @@ struct ParkingLiveActivity: Widget {
 private struct LockScreenBanner: View {
     let context: ActivityViewContext<ParkingActivityAttributes>
 
-    private var reading: CountdownReading {
-        CountdownReading(
-            limit: context.state.expiry.map { .expires(at: $0, source: .chosen(minutes: 0)) }
-                ?? .openEnded,
-            parkedAt: context.attributes.parkedAt,
-            now: .now
-        )
+    /// The ring measures the allowance's own span, which the state carries as
+    /// the pair of instants it runs between.
+    private var progress: Double {
+        guard let expiry = context.state.expiry,
+              let started = context.state.startedAt
+        else { return 0 }
+        let span = expiry.timeIntervalSince(started)
+        guard span > 0 else { return 1 }
+        return min(1, max(0, Date.now.timeIntervalSince(started) / span))
+    }
+
+    private var urgent: Bool {
+        guard let expiry = context.state.expiry else { return false }
+        let left = expiry.timeIntervalSinceNow
+        return left >= 0 && left <= CountdownReading.urgentSeconds
     }
 
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
-                CountdownRing(progress: reading.progress, urgent: reading.urgent, lineWidth: 6)
+                CountdownRing(progress: progress, urgent: urgent, lineWidth: 6)
                 CountdownFigure(expiry: context.state.expiry, now: .now, size: 17)
             }
             .frame(width: 68, height: 68)

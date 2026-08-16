@@ -150,9 +150,9 @@ struct CountdownReading {
     /// Under this much left, the ring starts to breathe.
     static let urgentSeconds: TimeInterval = 15 * 60
 
-    init(limit: ParkingLimit, parkedAt: Date, now: Date) {
+    init(limit: ParkingLimit, now: Date) {
         expiry = limit.expiry
-        progress = limit.progress(at: now, parkedAt: parkedAt) ?? 0
+        progress = limit.progress(at: now) ?? 0
         let remaining = limit.remaining(at: now)
         overrun = (remaining ?? 1) < 0
         urgent = remaining.map { $0 >= 0 && $0 <= Self.urgentSeconds } ?? false

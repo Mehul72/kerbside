@@ -43,6 +43,10 @@ struct ParkingActivityAttributes: ActivityAttributes {
         /// which the banner says plainly instead of showing a frozen zero.
         var expiry: Date?
 
+        /// When the allowance began running, so the banner's ring measures the
+        /// allowance rather than how long the car has been there.
+        var startedAt: Date?
+
         /// The first line of the plate the limit came from, in the plate's own
         /// lettering: `2P`, `NO STOPPING`.
         var headline: String
@@ -79,7 +83,8 @@ extension ParkingActivityAttributes.ContentState {
 
         return ParkingActivityAttributes.ContentState(
             expiry: spot.limit.expiry,
-            headline: governing.map { headline(of: $0) } ?? "PARKED",
+            startedAt: spot.limit.startedAt,
+            headline: governing.map(ParkWording.plateHeadline) ?? "PARKED",
             ink: governing.map { PlateInk($0.restriction) } ?? .grey,
             attribution: ParkWording.attribution(spot.limit, in: timeZone),
             activeRule: evaluation?.active.first.map { Wording.describe($0) },
@@ -94,13 +99,5 @@ extension ParkingActivityAttributes.ContentState {
         return spot.sign?.parsedPanels.first
     }
 
-    /// The words as the plate paints them, which is the first line of what was
-    /// photographed rather than a description of it.
-    private static func headline(of panel: Panel) -> String {
-        let first = panel.rawText
-            .split(separator: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .first { !$0.isEmpty }
-        return (first ?? Wording.describe(panel.restriction)).uppercased()
-    }
+
 }

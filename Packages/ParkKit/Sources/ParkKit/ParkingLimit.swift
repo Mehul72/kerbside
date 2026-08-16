@@ -51,13 +51,25 @@ public enum ParkingLimit: Hashable, Sendable, Codable {
         expiry.map { $0.timeIntervalSince(instant) }
     }
 
+    /// When the allowance began running, worked back from its own length.
+    ///
+    /// This is not when the car was left. A person who parks at ten and sets a
+    /// fifteen minute limit at eleven has fifteen minutes running, not an hour
+    /// and a quarter.
+    public var startedAt: Date? {
+        guard case .expires(let expiry, let source) = self, source.minutes > 0 else { return nil }
+        return expiry.addingTimeInterval(-Double(source.minutes) * 60)
+    }
+
     /// How far through the allowance a given instant is, in `0...1`.
-    /// Used to draw the ring, so it is clamped rather than allowed to run past
-    /// a full turn.
-    public func progress(at instant: Date, parkedAt: Date) -> Double? {
-        guard let expiry else { return nil }
-        let total = expiry.timeIntervalSince(parkedAt)
-        guard total > 0 else { return 1 }
-        return min(1, max(0, instant.timeIntervalSince(parkedAt) / total))
+    ///
+    /// Measured against the allowance's own span, so a ring drawn from this
+    /// starts full whenever a limit is set, whatever time the car arrived.
+    /// Clamped rather than allowed to run past a full turn.
+    public func progress(at instant: Date) -> Double? {
+        guard let expiry, let startedAt else { return nil }
+        let span = expiry.timeIntervalSince(startedAt)
+        guard span > 0 else { return 1 }
+        return min(1, max(0, instant.timeIntervalSince(startedAt) / span))
     }
 }

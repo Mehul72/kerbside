@@ -47,18 +47,13 @@ struct PastSpotsView: View {
         let timeZone: TimeZone
 
         private var headline: String? {
-            guard let panel = spot.sign?.parsedPanels.first else { return nil }
-            return panel.rawText
-                .split(separator: "\n")
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .first { !$0.isEmpty }?
-                .uppercased()
+            spot.sign?.parsedPanels.first.map(ParkWording.plateHeadline)
         }
 
         var body: some View {
             HStack(alignment: .top, spacing: 14) {
                 if let headline, let panel = spot.sign?.parsedPanels.first {
-                    PlateBadge(text: headline, tone: PlateTone(panel.restriction), size: 15)
+                    PlateBadge(text: headline, tone: PlateTone(panel.restriction), size: 13)
                 } else {
                     PlateBadge(text: "—", tone: .unread, size: 15)
                 }

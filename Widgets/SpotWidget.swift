@@ -104,22 +104,24 @@ struct SpotWidgetView: View {
     }
 
     private var reading: CountdownReading? {
-        entry.spot.map {
-            CountdownReading(limit: $0.limit, parkedAt: $0.parkedAt, now: entry.date)
-        }
+        entry.spot.map { CountdownReading(limit: $0.limit, now: entry.date) }
     }
 
     private var headline: String {
-        guard let panel = entry.spot?.sign?.parsedPanels.first else { return "PARKED" }
-        let first = panel.rawText
-            .split(separator: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .first { !$0.isEmpty }
-        return (first ?? Wording.describe(panel.restriction)).uppercased()
+        guard let panel = governing else { return "PARKED" }
+        return ParkWording.plateHeadline(panel)
+    }
+
+    /// The rule in force now speaks for the widget; failing that, the first
+    /// panel that parsed.
+    private var governing: Panel? {
+        guard let spot = entry.spot, let sign = spot.sign else { return nil }
+        let active = spot.evaluation(at: entry.date, in: SharedContainer.timeZone)?.active
+        return active?.first ?? sign.parsedPanels.first
     }
 
     private var tone: PlateTone {
-        guard let panel = entry.spot?.sign?.parsedPanels.first else { return .unread }
+        guard let panel = governing else { return .unread }
         return PlateTone(panel.restriction)
     }
 

@@ -102,6 +102,40 @@ public enum ParkWording {
         }
     }
 
+    // MARK: - Badges
+
+    /// A panel reduced to the few characters a plate paints largest, for the
+    /// places a whole plate will not fit: a widget, the Dynamic Island, a row
+    /// in a list.
+    ///
+    /// Derived from the restriction rather than taken from the first line of
+    /// what was photographed. A sign whose text broke across lines gives a
+    /// first line of `NO`, which says nothing and looks like a mistake; the
+    /// restriction always knows what the panel was.
+    public static func plateHeadline(_ panel: Panel) -> String {
+        switch panel.restriction {
+        case .noParking:
+            "NO PARKING"
+        case .noStopping:
+            "NO STOPPING"
+        case .timeLimited(let minutes):
+            allowanceBadge(minutes)
+        }
+    }
+
+    /// The way NSW paints an allowance: whole hours as `1P`, `2P`, `4P`, and
+    /// the two common fractions as `1/4P` and `1/2P`. Anything else is stated
+    /// in minutes rather than rounded into a plate that does not exist.
+    static func allowanceBadge(_ minutes: Int) -> String {
+        switch minutes {
+        case 15: "1/4P"
+        case 30: "1/2P"
+        case 45: "3/4P"
+        case let value where value % 60 == 0: "\(value / 60)P"
+        default: "\(minutes) MIN"
+        }
+    }
+
     // MARK: - Place
 
     /// How far the car is, and which way. Says when a fix was too loose to
