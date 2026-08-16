@@ -9,7 +9,19 @@ struct SourceFile {
 /// Two of the invariants are cheap to check mechanically, so a test does it
 /// rather than trusting anyone to notice in review.
 struct InvariantTests {
-    private static let searchedDirectories = ["Packages/SignKit", "Packages/SignVision", "App"]
+    private static let searchedDirectories = [
+        "Packages/SignKit",
+        "Packages/SignVision",
+        "Packages/ParkKit",
+        "App",
+        "Shared",
+        "Widgets",
+        "UITests",
+    ]
+
+    /// The two packages that hold the reasoning. Both are pure, both are
+    /// tested without a simulator, and neither may read the clock.
+    private static let pureSources = ["Packages/SignKit/Sources", "Packages/ParkKit/Sources/ParkKit"]
 
     /// This file names the very things it forbids, so it excludes itself.
     private static let selfPath = "Packages/SignKit/Tests/SignKitTests/InvariantTests.swift"
@@ -51,11 +63,44 @@ struct InvariantTests {
         }
     }
 
-    @Test("the parser never reads an ambient clock")
+    @Test("the reasoning never reads an ambient clock")
     func noAmbientClock() {
         for source in Self.swiftSources()
-        where source.path.hasPrefix("Packages/SignKit/Sources") && source.text.contains("Date()") {
+        where Self.pureSources.contains(where: source.path.hasPrefix) && source.text.contains("Date()") {
             Issue.record("\(source.path) reads the current time")
+        }
+    }
+
+    /// ParkKit reasons about places and durations, and it does so in plain
+    /// numbers. Letting CoreLocation in would put the walk home behind a
+    /// simulator, which is exactly what SignKit refuses for signs.
+    @Test("ParkKit depends on nothing but Foundation and SignKit")
+    func parkKitStaysPure() {
+        let allowed: Set<String> = ["Foundation", "SignKit"]
+        for source in Self.swiftSources()
+        where source.path.hasPrefix("Packages/ParkKit/Sources/ParkKit") {
+            for line in source.text.split(separator: "\n") where line.hasPrefix("import ") {
+                let module = line.dropFirst("import ".count).trimmingCharacters(in: .whitespaces)
+                if !allowed.contains(module) {
+                    Issue.record("\(source.path) imports \(module)")
+                }
+            }
+        }
+    }
+
+    /// The walk back is a bearing and a distance, never a map.
+    ///
+    /// Map tiles are fetched, and this app works in airplane mode because
+    /// everything it knows it worked out on the device. Handing off to Apple
+    /// Maps is allowed — that launches another app rather than making a
+    /// request — so `MKMapItem` is fine and a map view is not.
+    @Test("no map is ever drawn inside the app")
+    func noEmbeddedMap() {
+        let forbidden = ["MKMapView", "MapKit.Map", "Map(coordinateRegion", "Map(position"]
+        for source in Self.swiftSources() {
+            for needle in forbidden where source.text.contains(needle) {
+                Issue.record("\(source.path) draws a map with \(needle)")
+            }
         }
     }
 }
