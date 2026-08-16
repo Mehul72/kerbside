@@ -46,6 +46,7 @@ struct LimitSheet: View {
                                 controller.setLimit(minutes: minutes)
                                 dismiss()
                             }
+                            .accessibilityIdentifier("duration-\(minutes)")
                         }
                     }
 

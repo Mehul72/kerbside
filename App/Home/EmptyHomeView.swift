@@ -46,10 +46,12 @@ struct EmptyHomeView: View {
                             Text(controller.isSaving ? "Saving" : "Park here")
                         }
                         .buttonStyle(PlateButton(kind: .enamel))
+                        .accessibilityIdentifier("park")
                         .disabled(controller.isSaving)
 
                         Button("Read the sign first") { route = .reader }
                             .buttonStyle(PlateButton(kind: .outlined))
+                            .accessibilityIdentifier("read-sign")
                     }
                     .frame(maxWidth: 300)
                     .entering(2)

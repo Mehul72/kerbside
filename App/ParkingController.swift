@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import ParkKit
 import SignKit
@@ -34,11 +35,26 @@ final class ParkingController: ObservableObject {
     private let store = SharedContainer.store
     private let timeZone = SharedContainer.timeZone
     private var ruleChangeTask: Task<Void, Never>?
+    private var locationChanges: AnyCancellable?
 
     var spot: ParkingSpot? { record.active }
     var isParked: Bool { record.active != nil }
 
     init() {
+        // The interface test drives the real app against the real container,
+        // so it needs a way to start from nothing. Nothing else passes this.
+        if ProcessInfo.processInfo.arguments.contains("-kerbside-reset") {
+            try? store.save(.empty)
+        }
+
+        // Distance and bearing are read through this object but computed from
+        // the location service's own published state. Without forwarding, a
+        // fix arriving would update nothing on screen, because SwiftUI is
+        // watching this object and not that one.
+        locationChanges = location.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
+
         reload()
     }
 
@@ -188,6 +204,15 @@ final class ParkingController: ObservableObject {
     }
 
     // MARK: - Walking back
+
+    /// One fix, so the home screen can say how far the car is without running
+    /// the receiver continuously. Called when the parked screen appears; the
+    /// walk back screen starts real tracking instead.
+    func refreshHere() async {
+        guard record.active?.coordinate != nil, !location.isDenied else { return }
+        _ = await location.fix()
+        refreshLiveDistance()
+    }
 
     func startTracking() {
         location.startTracking()

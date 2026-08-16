@@ -45,6 +45,7 @@ struct ParkedView: View {
         .task {
             note = controller.spot?.note ?? ""
             remindersOn = await controller.remindersAuthorised()
+            await controller.refreshHere()
         }
     }
 
@@ -108,6 +109,7 @@ struct ParkedView: View {
                 .frame(width: 196, height: 196)
 
                 Text(ParkWording.attribution(spot?.limit ?? .openEnded, in: timeZone))
+                    .accessibilityIdentifier("limit-attribution")
                     .font(Kerb.voice(.subheadline))
                     .foregroundStyle(Kerb.chalk)
                     .multilineTextAlignment(.center)
@@ -117,6 +119,7 @@ struct ParkedView: View {
                     isEditingLimit = true
                 }
                 .kerbLabel(Kerb.amber, style: .footnote)
+                .accessibilityIdentifier("edit-limit")
             }
         }
         .entering(1)
@@ -151,6 +154,7 @@ struct ParkedView: View {
                     .kerbLabel(Kerb.chalkFaint)
                     .padding(.vertical, 10)
             }
+            .accessibilityIdentifier("no-sign")
 
             Text("Kerbside knows where the car is but not what it is parked under.")
                 .font(Kerb.voice(.subheadline))
@@ -167,6 +171,19 @@ struct ParkedView: View {
 
     // MARK: - Where
 
+    /// Waiting for a fix and being refused one are different states, and the
+    /// second is the only one somebody can do anything about.
+    private var placeholder: String {
+        controller.location.isDenied ? "Location is off" : "Finding you"
+    }
+
+    private var detail: String {
+        if controller.distance != nil { return "Walk me back to the car" }
+        return controller.location.isDenied
+            ? "Turn location on in Settings to be pointed back."
+            : "Waiting for a fix from this device."
+    }
+
     private var whereSection: some View {
         VStack(spacing: 16) {
             Divider().overlay(Kerb.chalkFaint.opacity(0.35))
@@ -181,16 +198,13 @@ struct ParkedView: View {
                             .frame(width: 42, height: 42)
 
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(controller.distance ?? "Finding you")
+                            Text(controller.distance ?? placeholder)
                                 .font(Kerb.voice(.headline))
                                 .foregroundStyle(Kerb.chalk)
-                            Text(
-                                controller.distance == nil
-                                    ? "Turn on location to be pointed back."
-                                    : "Walk me back to the car"
-                            )
-                            .font(Kerb.voice(.footnote))
-                            .foregroundStyle(Kerb.chalkDim)
+                                .considerate(Kerb.Motion.track, value: controller.distance)
+                            Text(detail)
+                                .font(Kerb.voice(.footnote))
+                                .foregroundStyle(Kerb.chalkDim)
                         }
 
                         Spacer(minLength: 0)
@@ -253,6 +267,7 @@ struct ParkedView: View {
                 controller.collect()
             }
             .buttonStyle(PlateButton(kind: .enamel))
+            .accessibilityIdentifier("collect")
 
             if controller.spot?.sign == nil {
                 Button("Read the sign") { route = .reader }

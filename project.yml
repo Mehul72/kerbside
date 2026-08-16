@@ -64,6 +64,30 @@ targets:
       base:
         PRODUCT_NAME: Kerbside
         PRODUCT_BUNDLE_IDENTIFIER: au.kerbside.Kerbside
+    scheme:
+      testTargets:
+        - KerbsideUITests
+
+  # Drives the real app in a simulator. The packages are tested without one;
+  # this covers the parts that only exist on a device: saving a spot, choosing
+  # a limit off a sign, and collecting the car again.
+  KerbsideUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Kerbside
+    entitlements:
+      path: UITests/KerbsideUITests.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.au.kerbside
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: au.kerbside.Kerbside.UITests
+        TEST_TARGET_NAME: Kerbside
+        GENERATE_INFOPLIST_FILE: true
 
   KerbsideWidgets:
     type: app-extension
