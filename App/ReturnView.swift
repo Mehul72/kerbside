@@ -42,6 +42,7 @@ struct ReturnView: View {
         .overlay(alignment: .topTrailing) {
             Button("Done") { dismiss() }
                 .kerbLabel(Kerb.chalkDim, style: .footnote)
+                .accessibilityIdentifier("done")
                 .padding(22)
         }
         .onAppear { controller.startTracking() }
