@@ -190,9 +190,17 @@ struct SpotWidgetView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
+    /// Even at this size the number says where it came from. A limit somebody
+    /// set is not "on this sign", and calling it that would put words on a
+    /// plate that the plate never said.
     private func caption(for spot: ParkingSpot, reading: CountdownReading) -> String {
         guard reading.expiry != nil else { return "No limit recorded" }
-        return reading.overrun ? "over the recorded limit" : "left on this sign"
+        if reading.overrun { return "over the recorded limit" }
+        return switch spot.limit.source {
+        case .sign: "left on this sign"
+        case .chosen: "left on the limit you set"
+        case nil: "left"
+        }
     }
 
     // MARK: - Lock Screen
