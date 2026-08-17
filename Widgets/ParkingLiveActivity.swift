@@ -82,7 +82,15 @@ private struct LockScreenBanner: View {
     private var urgent: Bool {
         guard let expiry = context.state.expiry else { return false }
         let left = expiry.timeIntervalSinceNow
-        return left >= 0 && left <= CountdownReading.urgentSeconds
+        return left > 0 && left <= CountdownReading.urgentSeconds
+    }
+
+    /// Whether the limit has run out. `isStale` is set by ActivityKit at the
+    /// stale date the app supplied, which is the expiry, so it is true exactly
+    /// when the figure has turned around and started counting up.
+    private var overrun: Bool {
+        guard let expiry = context.state.expiry else { return false }
+        return context.isStale || expiry <= .now
     }
 
     var body: some View {
@@ -113,7 +121,10 @@ private struct LockScreenBanner: View {
                     .foregroundStyle(Kerb.chalk)
                     .lineLimit(2)
 
-                if let rule = context.state.activeRule {
+                if overrun {
+                    Text("Over that limit now")
+                        .kerbLabel(Kerb.amber, style: .caption2)
+                } else if let rule = context.state.activeRule {
                     Text(rule)
                         .font(Kerb.voice(.caption2))
                         .foregroundStyle(Kerb.chalkDim)

@@ -26,9 +26,13 @@ public struct ParkingSpot: Hashable, Sendable, Codable, Identifiable {
 
     public var limit: ParkingLimit
 
-    /// A photograph of the spot, held in the shared container beside this
-    /// record. Only the name is stored, so the record stays small enough to
-    /// decode in a widget.
+    /// A photograph of the parked car, held in the shared container beside
+    /// this record. Only the name is stored, so the record stays small enough
+    /// to decode in a widget.
+    ///
+    /// This is the thing that actually finds a car in a multi-storey car park.
+    /// A coordinate gets you to the building; a picture of the pillar you left
+    /// it beside gets you to the car.
     public var photoFilename: String?
 
     /// Set when the car was collected, which is what moves a spot into the

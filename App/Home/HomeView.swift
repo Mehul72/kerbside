@@ -89,9 +89,9 @@ struct HomeView: View {
     /// that is already parked.
     private func use(sign: Sign, photo: UIImage?) {
         if controller.isParked {
-            controller.attach(sign: sign, photo: photo)
+            controller.attach(sign: sign)
         } else {
-            Task { await controller.park(sign: sign, photo: photo) }
+            Task { await controller.park(sign: sign) }
         }
     }
 }

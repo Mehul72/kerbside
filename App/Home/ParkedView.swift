@@ -1,36 +1,44 @@
 import ParkKit
+import PhotosUI
 import SignKit
 import SwiftUI
 import UIKit
 
 /// Home with a car saved.
 ///
-/// Top to bottom it answers three questions in the order they are asked: how
-/// long does the sign leave me, what does the sign actually say, and where is
-/// the car. Every number on this screen names where it came from.
+/// The order answers the questions in the order they are actually asked: how
+/// long have I got, where is the car, and only then what was written on the
+/// pole. Reading a sign is something you do *about* a parked car, so it sits
+/// below the car rather than above it, and it stays folded away until asked
+/// for.
 struct ParkedView: View {
     @ObservedObject var controller: ParkingController
     @Binding var route: HomeView.Route?
 
     @State private var isEditingLimit = false
     @State private var isCollecting = false
+    @State private var isTakingPhoto = false
+    @State private var isShowingPhoto = false
+    @State private var isShowingSign = false
+    @State private var pickedPhoto: PhotosPickerItem?
     @State private var note = ""
     @State private var reminders: ParkingController.ReminderState = .on
     @FocusState private var noteFocused: Bool
 
     private let timeZone = SharedContainer.timeZone
 
+    private var cameraAvailable: Bool {
+        UIImagePickerController.isSourceTypeAvailable(.camera)
+    }
+
     var body: some View {
         ScrollView {
-            VStack(spacing: 30) {
+            VStack(spacing: 28) {
                 header
                 countdown
-                if let spot = controller.spot, let sign = spot.sign {
-                    signSection(spot: spot, sign: sign)
-                } else {
-                    noSign
-                }
+                suggestion
                 whereSection
+                signSection
                 actions
             }
             .padding(.horizontal, 26)
@@ -44,6 +52,17 @@ struct ParkedView: View {
             LimitSheet(controller: controller)
                 .presentationDetents([.medium, .large])
         }
+        .fullScreenCover(isPresented: $isTakingPhoto) {
+            CameraPicker(isPresented: $isTakingPhoto) { image in
+                controller.setPhoto(image)
+            }
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $isShowingPhoto) {
+            if let photo = controller.photo {
+                PhotoView(image: photo) { controller.removePhoto() }
+            }
+        }
         .confirmationDialog(
             "Finished with this spot?",
             isPresented: $isCollecting,
@@ -54,6 +73,16 @@ struct ParkedView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("The spot moves to your past spots and the countdown stops.")
+        }
+        .onChange(of: pickedPhoto) { _, item in
+            guard let item else { return }
+            pickedPhoto = nil
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self),
+                      let image = UIImage(data: data)
+                else { return }
+                controller.setPhoto(image)
+            }
         }
         .task {
             note = controller.spot?.note ?? ""
@@ -97,8 +126,9 @@ struct ParkedView: View {
     /// right even when this view is not being refreshed at all.
     private var countdown: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            let spot = controller.spot
-            let reading = spot.map { CountdownReading(limit: $0.limit, now: context.date) }
+            let reading = controller.spot.map {
+                CountdownReading(limit: $0.limit, now: context.date)
+            }
 
             VStack(spacing: 16) {
                 ZStack {
@@ -120,14 +150,14 @@ struct ParkedView: View {
                 }
                 .frame(width: 196, height: 196)
 
-                Text(ParkWording.attribution(spot?.limit ?? .openEnded, in: timeZone))
+                Text(ParkWording.attribution(controller.spot?.limit ?? .openEnded, in: timeZone))
                     .accessibilityIdentifier("limit-attribution")
                     .font(Kerb.voice(.subheadline))
                     .foregroundStyle(Kerb.chalk)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 300)
 
-                Button(spot?.limit.expiry == nil ? "Set a limit" : "Change limit") {
+                Button(controller.spot?.limit.expiry == nil ? "Set a limit" : "Change limit") {
                     isEditingLimit = true
                 }
                 .kerbLabel(Kerb.amber, style: .footnote)
@@ -142,49 +172,39 @@ struct ParkedView: View {
         return reading.overrun ? "over" : "left"
     }
 
-    // MARK: - The sign
+    // MARK: - What the sign allows
 
-    private func signSection(spot: ParkingSpot, sign: Sign) -> some View {
-        VStack(spacing: 24) {
-            Divider().overlay(Kerb.chalkFaint.opacity(0.35))
+    /// The one place a sign earns space near the top: an allowance it states,
+    /// offered as a limit, while nothing has been committed yet.
+    @ViewBuilder
+    private var suggestion: some View {
+        if let candidate = controller.suggestion {
+            VStack(spacing: 12) {
+                Text("The sign allows").kerbLabel(Kerb.chalkDim, style: .caption)
+                Text(ParkWording.describe(candidate, in: timeZone))
+                    .font(Kerb.voice(.subheadline))
+                    .foregroundStyle(Kerb.chalk)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            SignStack(sign: sign, evaluation: controller.evaluation)
-
-            if let evaluation = controller.evaluation {
-                RuleNow(evaluation: evaluation, timeZone: timeZone)
+                Button("Count this down") { controller.choose(candidate) }
+                    .buttonStyle(PlateButton(kind: .enamel))
+                    .accessibilityIdentifier("use-suggestion")
             }
+            .padding(18)
+            .frame(maxWidth: .infinity)
+            .background(Kerb.amber.opacity(0.07))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Kerb.amber.opacity(0.35), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .entering(2)
         }
-        .entering(2)
     }
 
-    private var noSign: some View {
-        VStack(spacing: 14) {
-            Divider().overlay(Kerb.chalkFaint.opacity(0.35))
+    // MARK: - Where the car is
 
-            Plate(tone: .unread, lit: false, dashed: true) {
-                Text("No sign read")
-                    .kerbLabel(Kerb.chalkFaint)
-                    .padding(.vertical, 10)
-            }
-            .accessibilityIdentifier("no-sign")
-
-            Text("Kerbside knows where the car is but not what it is parked under.")
-                .font(Kerb.voice(.subheadline))
-                .foregroundStyle(Kerb.chalkDim)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 300)
-
-            Button("Read the sign") { route = .reader }
-                .buttonStyle(PlateButton(kind: .outlined))
-                .frame(maxWidth: 300)
-        }
-        .entering(2)
-    }
-
-    // MARK: - Where
-
-    /// Waiting for a fix and being refused one are different states, and the
-    /// second is the only one somebody can do anything about.
     private var placeholder: String {
         controller.location.isDenied ? "Location is off" : "Finding you"
     }
@@ -197,11 +217,13 @@ struct ParkedView: View {
     }
 
     private var whereSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             Divider().overlay(Kerb.chalkFaint.opacity(0.35))
 
-            Text("Where").kerbLabel(Kerb.chalkDim, style: .caption)
+            Text("Where the car is").kerbLabel(Kerb.chalkDim, style: .caption)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            photoCard
 
             if controller.spot?.coordinate != nil {
                 Button { route = .walkBack } label: {
@@ -224,6 +246,7 @@ struct ParkedView: View {
                             .foregroundStyle(Kerb.chalkFaint)
                     }
                     .padding(16)
+                    .frame(maxWidth: .infinity)
                     .background(Color.white.opacity(0.04))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -271,6 +294,132 @@ struct ParkedView: View {
         .entering(3)
     }
 
+    /// A photograph of the car, which is the thing that actually finds it in a
+    /// car park where every level looks the same.
+    @ViewBuilder
+    private var photoCard: some View {
+        if let photo = controller.photo {
+            Button { isShowingPhoto = true } label: {
+                Image(uiImage: photo)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: 170)
+                    .clipped()
+                    .overlay(alignment: .bottomLeading) {
+                        Text("Your car")
+                            .kerbLabel(Kerb.chalk, style: .caption2)
+                            .padding(10)
+                            .background(.black.opacity(0.45), in: Capsule())
+                            .padding(10)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("car-photo")
+            .accessibilityLabel("Photograph of your parked car")
+        } else if cameraAvailable {
+            Button { isTakingPhoto = true } label: { photoInvitation }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("take-photo")
+        } else {
+            // No camera here — a simulator, or a device without one. A picture
+            // already in the library answers the same question.
+            PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                photoInvitation
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("take-photo")
+        }
+    }
+
+    private var photoInvitation: some View {
+        HStack(spacing: 12) {
+            Image(systemName: cameraAvailable ? "camera" : "photo.on.rectangle")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(Kerb.amber)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(cameraAvailable ? "Photograph the car" : "Add a photo of the car")
+                    .font(Kerb.voice(.headline))
+                    .foregroundStyle(Kerb.chalk)
+                Text("The quickest way to find it again.")
+                    .font(Kerb.voice(.footnote))
+                    .foregroundStyle(Kerb.chalkDim)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(Color.white.opacity(0.04))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(
+                    Kerb.chalkFaint.opacity(0.35),
+                    style: StrokeStyle(lineWidth: 1, dash: [6, 5])
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    // MARK: - The sign, if there is one
+
+    /// Folded away by default. A sign is worth keeping and worth showing, but
+    /// it is not what somebody opens this app to look at.
+    private var signSection: some View {
+        VStack(spacing: 14) {
+            Divider().overlay(Kerb.chalkFaint.opacity(0.35))
+
+            if let sign = controller.spot?.sign {
+                Button {
+                    withAnimation(Kerb.Motion.settle) { isShowingSign.toggle() }
+                } label: {
+                    HStack(spacing: 12) {
+                        if let panel = sign.parsedPanels.first {
+                            PlateBadge(
+                                text: ParkWording.plateHeadline(panel),
+                                tone: PlateTone(panel.restriction),
+                                size: 13
+                            )
+                        }
+                        Text(summary(of: sign))
+                            .font(Kerb.voice(.footnote))
+                            .foregroundStyle(Kerb.chalkDim)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Image(systemName: isShowingSign ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Kerb.chalkFaint)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("toggle-sign")
+
+                if isShowingSign {
+                    SignStack(sign: sign, evaluation: controller.evaluation)
+                    if let evaluation = controller.evaluation {
+                        RuleNow(evaluation: evaluation, timeZone: timeZone)
+                    }
+                    Button("Read it again") { route = .reader }
+                        .kerbLabel(Kerb.chalkDim, style: .footnote)
+                }
+            } else {
+                Button("Read the sign · optional") { route = .reader }
+                    .kerbLabel(Kerb.chalkDim, style: .footnote)
+                    .accessibilityIdentifier("read-sign")
+            }
+        }
+        .entering(4)
+    }
+
+    /// The sign in one line, for the folded state.
+    private func summary(of sign: Sign) -> String {
+        guard let panel = sign.parsedPanels.first else { return "Not read" }
+        var text = Wording.describe(panel)
+        let others = sign.panels.count - 1
+        if others > 0 { text += " · \(others) more" }
+        return text
+    }
+
     // MARK: - Actions
 
     private var actions: some View {
@@ -310,6 +459,39 @@ struct ParkedView: View {
             }
         }
         .frame(maxWidth: 320)
-        .entering(4)
+        .entering(5)
+    }
+}
+
+/// The car's photograph, full size, with the one thing you might want to do to
+/// it: take it again, or drop it.
+private struct PhotoView: View {
+    let image: UIImage
+    let onRemove: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Kerb.asphalt.ignoresSafeArea()
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+            }
+            .navigationTitle("Your car")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Remove", role: .destructive) {
+                        onRemove()
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
     }
 }

@@ -46,10 +46,15 @@ final class ParkingFlowTests: XCTestCase {
             "No limit recorded.",
             "a spot with no sign must say it has no limit rather than showing one"
         )
+        // Reading a sign is offered, but only as an aside: the car is the
+        // point of the screen.
         XCTAssertTrue(
-            app.otherElements["no-sign"].exists || app.images["no-sign"].exists
-                || app.staticTexts["no-sign"].exists,
-            "a spot with no sign should show an unread plate"
+            app.buttons["read-sign"].exists,
+            "a spot with no sign should still offer to read one"
+        )
+        XCTAssertFalse(
+            app.buttons["use-suggestion"].exists,
+            "with no sign there is no allowance to suggest"
         )
 
         collect.tap()

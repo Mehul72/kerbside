@@ -88,6 +88,18 @@ struct ReturnView: View {
 
     private var footer: some View {
         VStack(spacing: 12) {
+            // The last twenty metres are the hard part, and a photograph does
+            // more for them than any bearing can.
+            if let photo = controller.photo {
+                Image(uiImage: photo)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: 110)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .accessibilityLabel("Photograph of your parked car")
+            }
+
             if let note = controller.spot?.note, !note.isEmpty {
                 Text(note)
                     .font(Kerb.voice(.headline))

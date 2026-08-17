@@ -107,7 +107,6 @@ final class ParkingController: ObservableObject {
         let now = Date()
         let coordinate = await location.fix()
         let id = UUID()
-        let filename = photo.flatMap { PhotoStore.save($0, id: id) }
 
         var spot = ParkingSpot(
             id: id,
@@ -116,7 +115,7 @@ final class ParkingController: ObservableObject {
             note: note,
             sign: sign,
             limit: .openEnded,
-            photoFilename: filename
+            photoFilename: photo.flatMap { PhotoStore.save($0, id: id) }
         )
 
         // The sign's own allowance is offered as the starting point when it is
@@ -172,13 +171,40 @@ final class ParkingController: ObservableObject {
     }
 
     /// Attaches a sign read after the car was already saved.
-    func attach(sign: Sign, photo: UIImage?) {
+    ///
+    /// The photograph of the sign is deliberately not kept: the panels are
+    /// redrawn as plates, which is more legible than the picture was, and the
+    /// spot's own photograph belongs to the car rather than to the sign.
+    func attach(sign: Sign) {
         guard var spot = record.active else { return }
         spot.sign = sign
-        if let photo, let filename = PhotoStore.save(photo, id: spot.id) {
-            spot.photoFilename = filename
-        }
         replaceActive(with: spot)
+    }
+
+    /// A photograph of where the car actually is.
+    func setPhoto(_ image: UIImage) {
+        guard var spot = record.active else { return }
+        if let existing = spot.photoFilename { PhotoStore.remove(existing) }
+        spot.photoFilename = PhotoStore.save(image, id: spot.id)
+        replaceActive(with: spot)
+    }
+
+    func removePhoto() {
+        guard var spot = record.active, let existing = spot.photoFilename else { return }
+        PhotoStore.remove(existing)
+        spot.photoFilename = nil
+        replaceActive(with: spot)
+    }
+
+    var photo: UIImage? {
+        record.active?.photoFilename.flatMap(PhotoStore.load)
+    }
+
+    /// The allowance the sign offers, when nothing has been committed yet. This
+    /// is what "the sign recommends" means: a proposal, still untaken.
+    var suggestion: LimitCandidate? {
+        guard record.active?.limit.expiry == nil else { return nil }
+        return candidates.soonestExpiring
     }
 
     /// Forgets a past spot, and the photograph that went with it. A row that

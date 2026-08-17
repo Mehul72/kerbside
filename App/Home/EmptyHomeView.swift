@@ -2,9 +2,10 @@ import SwiftUI
 
 /// Home with no car saved.
 ///
-/// One thing to do, said once. Saving a spot is deliberately possible without
-/// reading a sign first, because the moment a person needs this app most is
-/// the moment they are late and walking away from the car.
+/// One thing to do, said once, and it is not reading a sign. The moment this
+/// app matters is the moment somebody is walking away from their car in a
+/// hurry, so saving the spot is a single large target and everything else is
+/// smaller than it.
 struct EmptyHomeView: View {
     @ObservedObject var controller: ParkingController
     @Binding var route: HomeView.Route?
@@ -28,9 +29,8 @@ struct EmptyHomeView: View {
                             .font(Kerb.voice(.title3))
                             .foregroundStyle(Kerb.chalk)
                         Text(
-                            "Save where you left the car and Kerbside will point you "
-                                + "back to it. Read the sign as well and it will say what "
-                                + "the sign says."
+                            "Save where you left the car, and Kerbside will point you "
+                                + "back to it and tell you before your time runs out."
                         )
                         .font(Kerb.voice())
                         .foregroundStyle(Kerb.chalkDim)
@@ -41,7 +41,7 @@ struct EmptyHomeView: View {
 
                     Spacer(minLength: 34)
 
-                    VStack(spacing: 12) {
+                    VStack(spacing: 16) {
                         Button(action: { Task { await controller.park() } }) {
                             Text(controller.isSaving ? "Saving" : "Park here")
                         }
@@ -49,8 +49,11 @@ struct EmptyHomeView: View {
                         .accessibilityIdentifier("park")
                         .disabled(controller.isSaving)
 
-                        Button("Read the sign first") { route = .reader }
-                            .buttonStyle(PlateButton(kind: .outlined))
+                        // Deliberately not a second full-width button. Reading
+                        // a sign is useful but optional, and the sign can just
+                        // as well be read after the car is saved.
+                        Button("Read a sign first · optional") { route = .reader }
+                            .kerbLabel(Kerb.chalkDim, style: .footnote)
                             .accessibilityIdentifier("read-sign")
                     }
                     .frame(maxWidth: 300)

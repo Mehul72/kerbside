@@ -41,10 +41,15 @@ struct LiveActivityService: Sendable {
         )
         let spotID = spot.id.uuidString
 
+        // The expiry is the one moment the banner must redraw itself: the
+        // figure has to turn around and start counting up. Marking the content
+        // stale then is what wakes it, because the app will not be running.
+        let content = ActivityContent(state: state, staleDate: state.expiry)
+
         // Updating in place rather than restarting, so the Lock Screen does
         // not flash every time a distance changes.
         if let existing = running(for: spotID) {
-            await existing.update(ActivityContent(state: state, staleDate: nil))
+            await existing.update(content)
             return
         }
 
@@ -52,7 +57,7 @@ struct LiveActivityService: Sendable {
 
         _ = try? Activity.request(
             attributes: ParkingActivityAttributes(spotID: spotID, parkedAt: spot.parkedAt),
-            content: ActivityContent(state: state, staleDate: nil),
+            content: content,
             pushType: nil
         )
     }

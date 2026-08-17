@@ -157,7 +157,10 @@ struct CountdownReading {
         expiry = limit.expiry
         progress = limit.progress(at: now) ?? 0
         let remaining = limit.remaining(at: now)
-        overrun = (remaining ?? 1) < 0
+        // At the exact instant a limit runs out it has run out. Treating that
+        // as "still has time left" is what let a passed limit keep saying
+        // "left" while the figure beside it counted upwards.
+        overrun = (remaining ?? 1) <= 0
 
         let threshold = min(Self.urgentSeconds, (limit.span ?? 0) * 0.25)
         urgent = remaining.map { $0 >= 0 && $0 <= threshold } ?? false

@@ -51,8 +51,12 @@ struct SpotProvider: TimelineProvider {
                 dates.append(at)
                 at = at.addingTimeInterval(step)
             }
-            // The moment it runs out, when the figure turns and counts up.
-            if expiry > now { dates.append(expiry) }
+            // The moment it runs out, when the figure turns and counts up,
+            // and a moment after it in case the first is rendered early.
+            if expiry > now {
+                dates.append(expiry)
+                dates.append(expiry.addingTimeInterval(1))
+            }
         }
         // A backstop, so a widget left alone all day still refreshes.
         dates.append(now.addingTimeInterval(60 * 60))

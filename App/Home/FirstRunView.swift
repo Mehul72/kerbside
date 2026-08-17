@@ -55,19 +55,20 @@ struct FirstRunView: View {
 
                     VStack(alignment: .leading, spacing: 20) {
                         Point(
-                            "It remembers your car",
-                            "Where you left it, when, and what the sign above it said."
+                            "It remembers where you parked",
+                            "Save the spot, photograph the car, and be pointed back to "
+                                + "it with a bearing and a distance."
                         )
                         Point(
-                            "It reads the sign, it does not judge it",
-                            "Kerbside never says whether you may park. Every countdown "
-                                + "names the sign it was read from, or the limit you set "
-                                + "yourself."
+                            "It tells you before your time runs out",
+                            "Set how long you have and Kerbside counts it down on your "
+                                + "Lock Screen, and reminds you before it ends."
                         )
                         Point(
-                            "A sign it cannot read stays unread",
-                            "Panels that do not parse are shown as plainly as the ones "
-                                + "that do. Nothing is guessed."
+                            "It can read the sign too, if you want",
+                            "Photograph a NSW parking plate and it will say what each "
+                                + "panel says. It never says whether you may park, and a "
+                                + "panel it cannot read stays unread rather than guessed."
                         )
                         Point(
                             "Nothing leaves this device",
