@@ -21,21 +21,46 @@ struct CountdownRing: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// How much of the ring is still lit.
+    private var remaining: Double { max(0.0001, 1 - progress) }
+
     var body: some View {
         ZStack {
+            // The track. Barely there, so the lit part is the only thing the
+            // eye is asked to read.
             Circle()
-                .stroke(Kerb.chalkFaint.opacity(0.25), lineWidth: lineWidth)
+                .stroke(Kerb.chalkFaint.opacity(0.18), lineWidth: lineWidth)
 
+            // The filament, brightening towards its head.
             Circle()
-                .trim(from: 0, to: max(0.001, 1 - progress))
+                .trim(from: 0, to: remaining)
                 .stroke(
-                    Kerb.amber,
+                    AngularGradient(
+                        colors: [Kerb.amberDeep, Kerb.amber, Kerb.amberHot],
+                        center: .center,
+                        startAngle: .degrees(0),
+                        endAngle: .degrees(360 * remaining)
+                    ),
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .shadow(color: Kerb.amber.opacity(0.5), radius: urgent ? 10 : 5)
-                .considerate(Kerb.Motion.track, value: progress)
+                .shadow(color: Kerb.amber.opacity(urgent ? 0.65 : 0.4), radius: urgent ? 14 : 8)
+
+            // The head itself, a bright point where the time is being spent.
+            // It is what turns an arc into something moving.
+            GeometryReader { geometry in
+                let side = min(geometry.size.width, geometry.size.height)
+                Circle()
+                    .fill(Kerb.amberHot)
+                    .frame(width: lineWidth * 0.62, height: lineWidth * 0.62)
+                    .shadow(color: Kerb.amberHot.opacity(0.9), radius: lineWidth * 0.7)
+                    .offset(y: -(side - lineWidth) / 2)
+                    .rotationEffect(.degrees(360 * remaining))
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .opacity(progress > 0.002 && progress < 0.999 ? 1 : 0)
+            }
         }
+        .considerate(Kerb.Motion.track, value: progress)
         .modifier(Breathing(active: urgent && breathes && !reduceMotion))
         .accessibilityHidden(true)
     }

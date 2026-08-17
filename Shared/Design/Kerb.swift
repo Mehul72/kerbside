@@ -41,6 +41,13 @@ enum Kerb {
     /// colliding with the two that carry meaning on a plate.
     static let amber = Color(red: 0.918, green: 0.647, blue: 0.098)
 
+    /// The same amber, hotter and cooler, for the length of the countdown arc.
+    /// A single flat stroke reads as a progress bar bent into a circle; a
+    /// filament that brightens towards its head reads as something burning
+    /// down, which is what it is.
+    static let amberHot = Color(red: 0.996, green: 0.815, blue: 0.365)
+    static let amberDeep = Color(red: 0.741, green: 0.451, blue: 0.043)
+
     // MARK: - Metrics
 
     static let plateCorner: CGFloat = 12

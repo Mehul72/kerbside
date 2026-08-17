@@ -43,11 +43,18 @@ struct ParkingLiveActivity: Widget {
                             .lineLimit(2)
 
                         if let distance = context.state.distance {
+                            // Set in the same voice as the line above rather
+                            // than as a tracked label: letter spacing pushes
+                            // the first glyph past the text view's own bounds,
+                            // and the island clips it against its curve.
                             Text(distance)
-                                .kerbLabel(Kerb.chalkDim, style: .caption2)
+                                .font(Kerb.voice(.caption2))
+                                .foregroundStyle(Kerb.chalkDim)
+                                .lineLimit(1)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
                 }
             } compactLeading: {
                 Image(systemName: "car.fill")

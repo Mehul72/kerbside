@@ -132,6 +132,7 @@ struct ParkedView: View {
 
             VStack(spacing: 16) {
                 ZStack {
+                    HeroGlow(strength: reading?.urgent == true ? 0.26 : 0.16)
                     CountdownRing(
                         progress: reading?.progress ?? 0,
                         urgent: reading?.urgent ?? false,
@@ -193,12 +194,7 @@ struct ParkedView: View {
             }
             .padding(18)
             .frame(maxWidth: .infinity)
-            .background(Kerb.amber.opacity(0.07))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Kerb.amber.opacity(0.35), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .kerbCard(tint: Kerb.amber)
             .entering(2)
         }
     }
@@ -218,7 +214,7 @@ struct ParkedView: View {
 
     private var whereSection: some View {
         VStack(spacing: 14) {
-            Divider().overlay(Kerb.chalkFaint.opacity(0.35))
+            Hairline()
 
             Text("Where the car is").kerbLabel(Kerb.chalkDim, style: .caption)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -247,14 +243,9 @@ struct ParkedView: View {
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity)
-                    .background(Color.white.opacity(0.04))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Kerb.chalkFaint.opacity(0.35), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .kerbCard()
                 }
-                .buttonStyle(.plain)
+                .kerbPressable()
                 .accessibilityIdentifier("walk-back")
             } else {
                 Text(
@@ -277,15 +268,7 @@ struct ParkedView: View {
             .submitLabel(.done)
             .onSubmit { controller.setNote(note) }
             .padding(14)
-            .background(Color.white.opacity(0.04))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(
-                        noteFocused ? Kerb.amber.opacity(0.6) : Kerb.chalkFaint.opacity(0.35),
-                        lineWidth: 1
-                    )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .kerbCard(tint: noteFocused ? Kerb.amber : nil)
             .considerate(Kerb.Motion.settle, value: noteFocused)
             .onChange(of: noteFocused) { _, focused in
                 if !focused { controller.setNote(note) }
@@ -312,14 +295,14 @@ struct ParkedView: View {
                             .background(.black.opacity(0.45), in: Capsule())
                             .padding(10)
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .kerbCard()
             }
-            .buttonStyle(.plain)
+            .kerbPressable()
             .accessibilityIdentifier("car-photo")
             .accessibilityLabel("Photograph of your parked car")
         } else if cameraAvailable {
             Button { isTakingPhoto = true } label: { photoInvitation }
-                .buttonStyle(.plain)
+                .kerbPressable()
                 .accessibilityIdentifier("take-photo")
         } else {
             // No camera here — a simulator, or a device without one. A picture
@@ -327,7 +310,6 @@ struct ParkedView: View {
             PhotosPicker(selection: $pickedPhoto, matching: .images) {
                 photoInvitation
             }
-            .buttonStyle(.plain)
             .accessibilityIdentifier("take-photo")
         }
     }
@@ -349,15 +331,7 @@ struct ParkedView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity)
-        .background(Color.white.opacity(0.04))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(
-                    Kerb.chalkFaint.opacity(0.35),
-                    style: StrokeStyle(lineWidth: 1, dash: [6, 5])
-                )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .kerbCard(dashed: true)
     }
 
     // MARK: - The sign, if there is one
@@ -366,7 +340,7 @@ struct ParkedView: View {
     /// it is not what somebody opens this app to look at.
     private var signSection: some View {
         VStack(spacing: 14) {
-            Divider().overlay(Kerb.chalkFaint.opacity(0.35))
+            Hairline()
 
             if let sign = controller.spot?.sign {
                 Button {

@@ -20,10 +20,13 @@ struct ReturnView: View {
             VStack(spacing: 0) {
                 Spacer(minLength: 20)
 
-                BearingNeedle(
-                    bearing: controller.bearing,
-                    heading: controller.location.hasCompass ? controller.location.heading : nil
-                )
+                ZStack {
+                    HeroGlow(strength: 0.14)
+                    BearingNeedle(
+                        bearing: controller.bearing,
+                        heading: controller.location.hasCompass ? controller.location.heading : nil
+                    )
+                }
                 .frame(width: 250, height: 250)
 
                 Spacer(minLength: 26)
@@ -96,7 +99,7 @@ struct ReturnView: View {
                     .scaledToFill()
                     .frame(height: 110)
                     .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .kerbCard()
                     .accessibilityLabel("Photograph of your parked car")
             }
 
@@ -106,7 +109,7 @@ struct ReturnView: View {
                     .foregroundStyle(Kerb.chalk)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.05), in: Capsule())
+                    .kerbCard(radius: 22)
             }
 
             if !controller.location.hasCompass, controller.bearing != nil {

@@ -89,20 +89,34 @@ struct FirstRunView: View {
                     .padding(.top, 30)
                     .frame(maxWidth: 320)
 
-                    Button("Start") {
-                        FirstRunView.markSeen()
-                        dismiss()
-                    }
-                    .buttonStyle(PlateButton(kind: .enamel))
-                    .accessibilityIdentifier("intro-start")
-                    .frame(maxWidth: 300)
-                    .padding(.top, 32)
-
-                    Spacer(minLength: 30)
+                    Spacer(minLength: 24)
                 }
                 .padding(.horizontal, 28)
             }
             .scrollIndicators(.hidden)
+        }
+        // Pinned rather than placed at the end of the text. The one action on
+        // this screen should never be something you have to go looking for.
+        .safeAreaInset(edge: .bottom) {
+            Button("Start") {
+                FirstRunView.markSeen()
+                dismiss()
+            }
+            .buttonStyle(PlateButton(kind: .enamel))
+            .accessibilityIdentifier("intro-start")
+            .frame(maxWidth: 300)
+            .padding(.horizontal, 28)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+            .frame(maxWidth: .infinity)
+            .background(
+                LinearGradient(
+                    colors: [.clear, Kerb.asphalt.opacity(0.92), Kerb.asphalt],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea(edges: .bottom)
+            )
         }
         .preferredColorScheme(.dark)
         .interactiveDismissDisabled()

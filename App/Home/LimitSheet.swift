@@ -132,17 +132,9 @@ struct LimitSheet: View {
                 }
                 .padding(15)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white.opacity(selected ? 0.08 : 0.04))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(
-                            selected ? Kerb.amber.opacity(0.7) : Kerb.chalkFaint.opacity(0.3),
-                            lineWidth: 1
-                        )
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .kerbCard(tint: selected ? Kerb.amber : nil)
             }
-            .buttonStyle(.plain)
+            .kerbPressable()
             .disabled(!enabled)
             .opacity(enabled ? 1 : 0.65)
         }
