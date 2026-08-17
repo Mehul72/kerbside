@@ -96,6 +96,13 @@ final class ParkingController: ObservableObject {
         return Geo.bearing(from: here, to: car)
     }
 
+    /// How long the walk back would take from where the phone is now, when
+    /// that is knowable. This is what sets the reminder: a fixed warning is
+    /// useless at both ends of the range, and only the app knows the distance.
+    var walkingMinutes: Int? {
+        metresAway.map { Geo.walkingMinutes(metres: $0) }
+    }
+
     // MARK: - Parking
 
     /// Saves where the car is. The fix is asked for here rather than at launch,
@@ -253,7 +260,12 @@ final class ParkingController: ObservableObject {
         if await reminders.authorisationStatus() == .authorized { return true }
         let granted = await reminders.authorise()
         if granted, let spot = record.active {
-            await reminders.reschedule(for: spot, now: Date(), in: timeZone)
+            await reminders.reschedule(
+                for: spot,
+                now: Date(),
+                in: timeZone,
+                walkingMinutes: walkingMinutes
+            )
         }
         return granted
     }
@@ -264,9 +276,19 @@ final class ParkingController: ObservableObject {
     /// the receiver continuously. Called when the parked screen appears; the
     /// walk back screen starts real tracking instead.
     func refreshHere() async {
-        guard record.active?.coordinate != nil, !location.isDenied else { return }
+        guard let spot = record.active, spot.coordinate != nil, !location.isDenied else { return }
         _ = await location.fix()
         refreshLiveDistance()
+
+        // A fresh distance changes when it is time to head back, so the plan is
+        // rewritten rather than left as it was scheduled from somewhere else.
+        let walk = walkingMinutes
+        await reminders.reschedule(
+            for: spot,
+            now: Date(),
+            in: timeZone,
+            walkingMinutes: walk
+        )
     }
 
     func startTracking() {
@@ -305,9 +327,15 @@ final class ParkingController: ObservableObject {
 
         if let spot = record.active {
             let distance = distance
+            let walk = walkingMinutes
             Task {
                 await activities.sync(for: spot, distance: distance, now: now, in: timeZone)
-                await reminders.reschedule(for: spot, now: now, in: timeZone)
+                await reminders.reschedule(
+                    for: spot,
+                    now: now,
+                    in: timeZone,
+                    walkingMinutes: walk
+                )
             }
         } else {
             Task {

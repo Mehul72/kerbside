@@ -86,7 +86,7 @@ extension ParkingActivityAttributes.ContentState {
             startedAt: spot.limit.startedAt,
             headline: governing.map(ParkWording.plateHeadline) ?? "PARKED",
             ink: governing.map { PlateInk($0.restriction) } ?? .grey,
-            attribution: ParkWording.attribution(spot.limit, in: timeZone),
+            attribution: ParkWording.attribution(spot.limit, at: instant, in: timeZone),
             activeRule: evaluation?.active.first.map { Wording.describe($0) },
             distance: distance
         )

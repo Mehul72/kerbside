@@ -120,3 +120,107 @@ struct ReminderPlanTests {
         #expect(first.map(\.id) == second.map(\.id))
     }
 }
+
+/// The reminder that is worth having: leave now, because the walk back plus a
+/// little is all the time that is left.
+struct TimeToLeaveTests {
+
+    static let parked = Clock.sydney(2026, 8, 19, 13)
+
+    static func spot(expiring at: Date) -> ParkingSpot {
+        ParkingSpot(
+            parkedAt: parked,
+            limit: .expires(at: at, source: .chosen(minutes: 120))
+        )
+    }
+
+    @Test("a distant car is called back earlier than a near one")
+    func leadFollowsTheWalk() throws {
+        let expiry = Clock.sydney(2026, 8, 19, 15)
+
+        func leaveTime(walk: Int) throws -> Date {
+            let reminders = ReminderPlan.reminders(
+                for: Self.spot(expiring: expiry),
+                now: Self.parked,
+                in: Clock.sydney,
+                walkingMinutes: walk
+            )
+            let leave = try #require(reminders.first { $0.kind == .timeToLeave(walkMinutes: walk) })
+            return leave.at
+        }
+
+        // Walk plus the five minute buffer, every time.
+        #expect(try leaveTime(walk: 2) == Clock.sydney(2026, 8, 19, 14, 53))
+        #expect(try leaveTime(walk: 10) == Clock.sydney(2026, 8, 19, 14, 45))
+        #expect(try leaveTime(walk: 25) == Clock.sydney(2026, 8, 19, 14, 30))
+    }
+
+    @Test("a known walk replaces the fixed warning rather than adding to it")
+    func walkReplacesTheFixedLead() {
+        let reminders = ReminderPlan.reminders(
+            for: Self.spot(expiring: Clock.sydney(2026, 8, 19, 15)),
+            now: Self.parked,
+            in: Clock.sydney,
+            walkingMinutes: 4
+        )
+        #expect(reminders.contains { $0.kind == .timeToLeave(walkMinutes: 4) })
+        #expect(!reminders.contains { $0.kind == .limitEndsSoon(minutesBefore: 15) })
+    }
+
+    @Test("with no distance to work from, the fixed warning still stands")
+    func fallsBackWithoutADistance() {
+        let reminders = ReminderPlan.reminders(
+            for: Self.spot(expiring: Clock.sydney(2026, 8, 19, 15)),
+            now: Self.parked,
+            in: Clock.sydney,
+            walkingMinutes: nil
+        )
+        #expect(reminders.contains { $0.kind == .limitEndsSoon(minutesBefore: 15) })
+        #expect(!reminders.contains { if case .timeToLeave = $0.kind { true } else { false } })
+    }
+
+    @Test("the moment it runs out is said either way")
+    func expiryIsAlwaysSaid() {
+        for walk in [nil, 3] as [Int?] {
+            let reminders = ReminderPlan.reminders(
+                for: Self.spot(expiring: Clock.sydney(2026, 8, 19, 15)),
+                now: Self.parked,
+                in: Clock.sydney,
+                walkingMinutes: walk
+            )
+            #expect(
+                reminders.contains { $0.kind == .limitEnded },
+                "expected an expiry notice with walkingMinutes \(String(describing: walk))"
+            )
+        }
+    }
+
+    @Test("a walk longer than the time left cannot fire in the past")
+    func tooLateToLeave() {
+        // Ten minutes left, but the car is half an hour away.
+        let reminders = ReminderPlan.reminders(
+            for: Self.spot(expiring: Self.parked.addingTimeInterval(10 * 60)),
+            now: Self.parked,
+            in: Clock.sydney,
+            walkingMinutes: 30
+        )
+        #expect(!reminders.contains { if case .timeToLeave = $0.kind { true } else { false } })
+        #expect(reminders.contains { $0.kind == .limitEnded })
+    }
+
+    @Test("the notification says how far the walk is and what runs out")
+    func wording() throws {
+        let spot = Self.spot(expiring: Clock.sydney(2026, 8, 19, 15))
+        let reminders = ReminderPlan.reminders(
+            for: spot,
+            now: Self.parked,
+            in: Clock.sydney,
+            walkingMinutes: 8
+        )
+        let leave = try #require(reminders.first { $0.kind == .timeToLeave(walkMinutes: 8) })
+        let words = ParkWording.notification(for: leave, spot: spot, in: Clock.sydney)
+        #expect(words.title == "Time to head back")
+        #expect(words.body.contains("8 minutes"))
+        #expect(words.body.contains("3:00 pm"))
+    }
+}

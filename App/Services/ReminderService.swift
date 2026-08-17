@@ -29,10 +29,20 @@ final class ReminderService {
     /// Rescheduling is always a replacement, never an addition: a reminder's
     /// identity comes from the spot and the reason, so changing a limit
     /// rewrites the reminders rather than leaving the old ones to fire.
-    func reschedule(for spot: ParkingSpot, now: Date, in timeZone: TimeZone) async {
+    func reschedule(
+        for spot: ParkingSpot,
+        now: Date,
+        in timeZone: TimeZone,
+        walkingMinutes: Int? = nil
+    ) async {
         await clear()
 
-        let reminders = ReminderPlan.reminders(for: spot, now: now, in: timeZone)
+        let reminders = ReminderPlan.reminders(
+            for: spot,
+            now: now,
+            in: timeZone,
+            walkingMinutes: walkingMinutes
+        )
         guard !reminders.isEmpty else { return }
         guard await authorisationStatus() == .authorized else { return }
 

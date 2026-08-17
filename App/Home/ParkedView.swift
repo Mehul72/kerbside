@@ -132,10 +132,14 @@ struct ParkedView: View {
 
             VStack(spacing: 16) {
                 ZStack {
-                    HeroGlow(strength: reading?.urgent == true ? 0.26 : 0.16)
+                    HeroGlow(
+                        tint: reading?.overrun == true ? Kerb.overdue : Kerb.amber,
+                        strength: reading?.urgent == true || reading?.overrun == true ? 0.26 : 0.16
+                    )
                     CountdownRing(
                         progress: reading?.progress ?? 0,
                         urgent: reading?.urgent ?? false,
+                        overrun: reading?.overrun ?? false,
                         lineWidth: 11
                     )
                     VStack(spacing: 2) {
@@ -146,12 +150,21 @@ struct ParkedView: View {
                         )
                         .frame(width: 150)
                         Text(caption(for: reading))
-                            .kerbLabel(Kerb.chalkDim, style: .caption2)
+                            .kerbLabel(
+                                reading?.overrun == true ? Kerb.overdue : Kerb.chalkDim,
+                                style: .caption2
+                            )
                     }
                 }
                 .frame(width: 196, height: 196)
 
-                Text(ParkWording.attribution(controller.spot?.limit ?? .openEnded, in: timeZone))
+                Text(
+                    ParkWording.attribution(
+                        controller.spot?.limit ?? .openEnded,
+                        at: context.date,
+                        in: timeZone
+                    )
+                )
                     .accessibilityIdentifier("limit-attribution")
                     .font(Kerb.voice(.subheadline))
                     .foregroundStyle(Kerb.chalk)

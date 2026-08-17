@@ -174,21 +174,26 @@ struct SpotWidgetView: View {
         HStack(spacing: 16) {
             if let spot = entry.spot, let reading {
                 ZStack {
-                    CountdownRing(progress: reading.progress, urgent: reading.urgent, lineWidth: 7)
+                    CountdownRing(
+                        progress: reading.progress,
+                        urgent: reading.urgent,
+                        overrun: reading.overrun,
+                        lineWidth: 7
+                    )
                     // Held inside the ring's bore. A long figure such as
                     // 1:58:16 shrinks to fit rather than crossing the stroke.
                     VStack(spacing: 0) {
                         CountdownFigure(expiry: reading.expiry, now: entry.date, size: 18)
                             .frame(width: 58)
                         Text(reading.overrun ? "over" : "left")
-                            .kerbLabel(Kerb.chalkDim, style: .caption2)
+                            .kerbLabel(reading.overrun ? Kerb.overdue : Kerb.chalkDim, style: .caption2)
                     }
                 }
                 .frame(width: 82, height: 82)
 
                 VStack(alignment: .leading, spacing: 8) {
                     PlateBadge(text: headline, tone: tone, size: 17)
-                    Text(ParkWording.attribution(spot.limit, in: SharedContainer.timeZone))
+                    Text(ParkWording.attribution(spot.limit, at: entry.date, in: SharedContainer.timeZone))
                         .font(Kerb.voice(.caption))
                         .foregroundStyle(Kerb.chalk)
                         .lineLimit(2)
@@ -259,7 +264,7 @@ struct SpotWidgetView: View {
                     .font(.system(size: 13, weight: .black).width(.condensed))
                 CountdownFigure(expiry: reading.expiry, now: entry.date, size: 19)
                     .foregroundStyle(.primary)
-                Text(ParkWording.attribution(spot.limit, in: SharedContainer.timeZone))
+                Text(ParkWording.attribution(spot.limit, at: entry.date, in: SharedContainer.timeZone))
                     .font(.caption2)
                     .lineLimit(1)
             } else {

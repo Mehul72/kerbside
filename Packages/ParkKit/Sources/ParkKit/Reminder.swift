@@ -4,6 +4,13 @@ import SignKit
 /// Why a reminder is worth interrupting somebody for.
 public enum ReminderKind: Hashable, Sendable, Codable {
 
+    /// There is just enough time left to walk back to the car, plus a little.
+    ///
+    /// This is the reminder that is actually useful: a fixed warning is either
+    /// too early when the car is at the kerb outside or far too late when it is
+    /// a kilometre away, and only the app knows which.
+    case timeToLeave(walkMinutes: Int)
+
     /// The allowance is nearly used up.
     case limitEndsSoon(minutesBefore: Int)
 
@@ -44,10 +51,20 @@ public struct ReminderPreferences: Hashable, Sendable, Codable {
     /// Whether to say anything when a rule on the sign starts applying.
     public var restrictionChanges: Bool
 
-    public init(leads: [Int], atExpiry: Bool, restrictionChanges: Bool) {
+    /// Minutes of slack on top of the walk back, so a reminder does not arrive
+    /// at the exact moment somebody would have to start running.
+    public var walkingBuffer: Int
+
+    public init(
+        leads: [Int],
+        atExpiry: Bool,
+        restrictionChanges: Bool,
+        walkingBuffer: Int = 5
+    ) {
         self.leads = leads
         self.atExpiry = atExpiry
         self.restrictionChanges = restrictionChanges
+        self.walkingBuffer = walkingBuffer
     }
 
     public static let standard = ReminderPreferences(
@@ -65,17 +82,38 @@ public struct ReminderPreferences: Hashable, Sendable, Codable {
 /// in the app does.
 public enum ReminderPlan {
 
+    /// - Parameter walkingMinutes: how long it would take to walk back from
+    ///   where the person is now, when that is known. When it is, it replaces
+    ///   the fixed warning entirely: being told "leave now" is strictly better
+    ///   than being told "fifteen minutes left" from an unknown distance.
     public static func reminders(
         for spot: ParkingSpot,
         now: Date,
         in timeZone: TimeZone,
+        walkingMinutes: Int? = nil,
         preferences: ReminderPreferences = .standard,
         publicHolidays: any PublicHolidayProvider = NSWPublicHolidays.current
     ) -> [Reminder] {
         guard spot.collectedAt == nil else { return [] }
         var reminders: [Reminder] = []
 
-        if let expiry = spot.limit.expiry {
+        if let expiry = spot.limit.expiry, let walk = walkingMinutes, walk >= 0 {
+            let lead = walk + preferences.walkingBuffer
+            let at = expiry.addingTimeInterval(-Double(lead) * 60)
+            if at > now, at > spot.parkedAt {
+                reminders.append(
+                    Reminder(
+                        id: "\(spot.id.uuidString).leave",
+                        at: at,
+                        kind: .timeToLeave(walkMinutes: walk)
+                    )
+                )
+            }
+        }
+
+        // The fixed warning is a fallback for when there is no distance to work
+        // from — no fix, or location refused.
+        if let expiry = spot.limit.expiry, walkingMinutes == nil {
             for lead in preferences.leads where lead > 0 {
                 let at = expiry.addingTimeInterval(-Double(lead) * 60)
                 // A warning that would fire before the car was even left is
@@ -89,12 +127,14 @@ public enum ReminderPlan {
                     )
                 )
             }
+        }
 
-            if preferences.atExpiry, expiry > now {
-                reminders.append(
-                    Reminder(id: "\(spot.id.uuidString).ended", at: expiry, kind: .limitEnded)
-                )
-            }
+        // The moment it runs out is worth saying however the warning was
+        // worked out, so this sits outside both branches above.
+        if let expiry = spot.limit.expiry, preferences.atExpiry, expiry > now {
+            reminders.append(
+                Reminder(id: "\(spot.id.uuidString).ended", at: expiry, kind: .limitEnded)
+            )
         }
 
         if preferences.restrictionChanges,

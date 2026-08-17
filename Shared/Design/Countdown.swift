@@ -3,10 +3,12 @@ import SwiftUI
 
 /// The ring around a countdown.
 ///
-/// It depletes as the allowance is used, and it is amber throughout, because
-/// amber is this app's colour for time. It never turns green or red: those two
-/// belong to the plate and mean what the plate means. A ring that turned red
-/// would be the app forming an opinion, and it does not have one.
+/// It depletes as the allowance is used, in amber, because amber is this app's
+/// colour for time. Once the limit has passed it fills again in `overdue` red —
+/// a hue held apart from a plate's `signRed` on purpose. The plate's red is a
+/// prohibition the street is making; this red only reports that a limit
+/// somebody set has been passed, which is a fact about a clock and not an
+/// opinion about a car.
 struct CountdownRing: View {
 
     /// How much of the allowance has been used, in `0...1`.
@@ -16,13 +18,22 @@ struct CountdownRing: View {
     /// rather than by a change of colour.
     var urgent: Bool = false
 
+    /// Whether the limit has been passed. Amber counts time down; red reports
+    /// that it has run out.
+    var overrun: Bool = false
+
     var lineWidth: CGFloat = 9
     var breathes: Bool = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// How much of the ring is still lit.
-    private var remaining: Double { max(0.0001, 1 - progress) }
+    /// How much of the ring is still lit. A passed limit shows a full ring in
+    /// red rather than an empty one, because an empty ring says nothing.
+    private var remaining: Double { overrun ? 1 : max(0.0001, 1 - progress) }
+
+    private var tail: Color { overrun ? Kerb.overdue : Kerb.amberDeep }
+    private var core: Color { overrun ? Kerb.overdue : Kerb.amber }
+    private var head: Color { overrun ? Kerb.overdueHot : Kerb.amberHot }
 
     var body: some View {
         ZStack {
@@ -36,7 +47,7 @@ struct CountdownRing: View {
                 .trim(from: 0, to: remaining)
                 .stroke(
                     AngularGradient(
-                        colors: [Kerb.amberDeep, Kerb.amber, Kerb.amberHot],
+                        colors: [tail, core, head],
                         center: .center,
                         startAngle: .degrees(0),
                         endAngle: .degrees(360 * remaining)
@@ -44,20 +55,20 @@ struct CountdownRing: View {
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .shadow(color: Kerb.amber.opacity(urgent ? 0.65 : 0.4), radius: urgent ? 14 : 8)
+                .shadow(color: core.opacity(urgent || overrun ? 0.65 : 0.4), radius: urgent || overrun ? 14 : 8)
 
             // The head itself, a bright point where the time is being spent.
             // It is what turns an arc into something moving.
             GeometryReader { geometry in
                 let side = min(geometry.size.width, geometry.size.height)
                 Circle()
-                    .fill(Kerb.amberHot)
+                    .fill(head)
                     .frame(width: lineWidth * 0.62, height: lineWidth * 0.62)
-                    .shadow(color: Kerb.amberHot.opacity(0.9), radius: lineWidth * 0.7)
+                    .shadow(color: head.opacity(0.9), radius: lineWidth * 0.7)
                     .offset(y: -(side - lineWidth) / 2)
                     .rotationEffect(.degrees(360 * remaining))
                     .frame(width: geometry.size.width, height: geometry.size.height)
-                    .opacity(progress > 0.002 && progress < 0.999 ? 1 : 0)
+                    .opacity(!overrun && progress > 0.002 && progress < 0.999 ? 1 : 0)
             }
         }
         .considerate(Kerb.Motion.track, value: progress)
@@ -121,7 +132,7 @@ struct CountdownFigure: View {
                         timerInterval: expiry...expiry.addingTimeInterval(60 * 60 * 24 * 7),
                         countsDown: false
                     )
-                    .foregroundStyle(Kerb.amber)
+                    .foregroundStyle(Kerb.overdue)
                 }
             } else {
                 Text("—").foregroundStyle(Kerb.chalkDim)

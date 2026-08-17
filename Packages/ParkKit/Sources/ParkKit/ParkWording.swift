@@ -92,13 +92,22 @@ public enum ParkWording {
 
     /// The line under the countdown, which always says where the number came
     /// from.
-    public static func attribution(_ limit: ParkingLimit, in timeZone: TimeZone) -> String {
+    ///
+    /// - Parameter now: when supplied, a limit already passed is put in the past
+    ///   tense. A sentence that says a limit "runs out" at a time that has been
+    ///   and gone reads as though nothing has happened.
+    public static func attribution(
+        _ limit: ParkingLimit,
+        at now: Date? = nil,
+        in timeZone: TimeZone
+    ) -> String {
         switch limit {
         case .openEnded:
             return "No limit recorded."
         case .expires(let at, let source):
             let time = clock(at, in: timeZone)
-            return "\(describe(source)) runs out at \(time)."
+            let passed = now.map { at <= $0 } ?? false
+            return "\(describe(source)) \(passed ? "ran" : "runs") out at \(time)."
         }
     }
 
@@ -157,6 +166,12 @@ public enum ParkWording {
         in timeZone: TimeZone
     ) -> (title: String, body: String) {
         switch reminder.kind {
+        case .timeToLeave(let walkMinutes):
+            let walk = walkMinutes <= 1
+                ? "The car is a minute away"
+                : "The car is about \(walkMinutes) minutes' walk"
+            return ("Time to head back", "\(walk). \(attribution(spot.limit, in: timeZone))")
+
         case .limitEndsSoon(let minutesBefore):
             return (
                 "\(minutesBefore) minutes left",

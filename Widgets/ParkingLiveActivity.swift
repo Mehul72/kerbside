@@ -75,21 +75,13 @@ struct ParkingLiveActivity: Widget {
 private struct LockScreenBanner: View {
     let context: ActivityViewContext<ParkingActivityAttributes>
 
-    /// The ring measures the allowance's own span, which the state carries as
-    /// the pair of instants it runs between.
-    private var progress: Double {
+    /// The span the allowance runs across, when there is one.
+    private var window: ClosedRange<Date>? {
         guard let expiry = context.state.expiry,
-              let started = context.state.startedAt
-        else { return 0 }
-        let span = expiry.timeIntervalSince(started)
-        guard span > 0 else { return 1 }
-        return min(1, max(0, Date.now.timeIntervalSince(started) / span))
-    }
-
-    private var urgent: Bool {
-        guard let expiry = context.state.expiry else { return false }
-        let left = expiry.timeIntervalSinceNow
-        return left > 0 && left <= CountdownReading.urgentSeconds
+              let started = context.state.startedAt,
+              started < expiry
+        else { return nil }
+        return started...expiry
     }
 
     /// Whether the limit has run out. `isStale` is set by ActivityKit at the
@@ -103,7 +95,32 @@ private struct LockScreenBanner: View {
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
-                CountdownRing(progress: progress, urgent: urgent, lineWidth: 6)
+                // Drawn by the system rather than by this view.
+                //
+                // A Live Activity is rendered out of process and only redrawn
+                // when its state changes, so a ring computed from `Date.now`
+                // freezes at whatever instant it last rendered while the figure
+                // beside it keeps ticking. `ProgressView(timerInterval:)` is
+                // the one progress the system animates on its own, so it stays
+                // honest without the app running.
+                if let window, !overrun {
+                    ProgressView(timerInterval: window, countsDown: true) {
+                        EmptyView()
+                    } currentValueLabel: {
+                        EmptyView()
+                    }
+                    .progressViewStyle(.circular)
+                    .tint(Kerb.amber)
+                    .labelsHidden()
+                } else {
+                    Circle()
+                        .stroke(
+                            overrun ? Kerb.overdue : Kerb.chalkFaint.opacity(0.25),
+                            lineWidth: 6
+                        )
+                        .shadow(color: overrun ? Kerb.overdue.opacity(0.6) : .clear, radius: 10)
+                }
+
                 CountdownFigure(expiry: context.state.expiry, now: .now, size: 16)
                     .frame(width: 48)
             }

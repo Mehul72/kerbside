@@ -48,6 +48,13 @@ enum Kerb {
     static let amberHot = Color(red: 0.996, green: 0.815, blue: 0.365)
     static let amberDeep = Color(red: 0.741, green: 0.451, blue: 0.043)
 
+    /// Past the limit. Deliberately not `signRed`: a plate's red is a
+    /// prohibition the street is making, and this is only the clock reporting
+    /// that a limit somebody set has been passed. Keeping the two hues apart
+    /// stops a countdown from looking like a sign.
+    static let overdue = Color(red: 0.937, green: 0.325, blue: 0.314)
+    static let overdueHot = Color(red: 1.000, green: 0.510, blue: 0.478)
+
     // MARK: - Metrics
 
     static let plateCorner: CGFloat = 12
