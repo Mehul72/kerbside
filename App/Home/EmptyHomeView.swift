@@ -49,12 +49,22 @@ struct EmptyHomeView: View {
                         .accessibilityIdentifier("park")
                         .disabled(controller.isSaving)
 
-                        // Deliberately not a second full-width button. Reading
-                        // a sign is useful but optional, and the sign can just
-                        // as well be read after the car is saved.
-                        Button("Read a sign first · optional") { route = .reader }
-                            .kerbLabel(Kerb.chalkDim, style: .footnote)
-                            .accessibilityIdentifier("read-sign")
+                        // Deliberately not a second full-width button. The sign
+                        // can just as well be read after the car is saved, so
+                        // it does not compete with saving it.
+                        Button {
+                            route = .reader
+                        } label: {
+                            HStack(spacing: 9) {
+                                Image(systemName: "viewfinder")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text("Read a sign first")
+                                    .font(Kerb.voice(.subheadline))
+                            }
+                            .foregroundStyle(Kerb.chalkDim)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("read-sign")
                     }
                     .frame(maxWidth: 300)
                     .entering(2)

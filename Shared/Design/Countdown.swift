@@ -9,6 +9,11 @@ import SwiftUI
 /// prohibition the street is making; this red only reports that a limit
 /// somebody set has been passed, which is a fact about a clock and not an
 /// opinion about a car.
+///
+/// The shading runs **across** the ring rather than along it. An angular
+/// gradient following the arc looked like a filament in theory and like a fault
+/// in practice: on a nearly full circle its dark tail meets its bright head at
+/// twelve o'clock and the join reads as a break in the stroke.
 struct CountdownRing: View {
 
     /// How much of the allowance has been used, in `0...1`.
@@ -31,9 +36,19 @@ struct CountdownRing: View {
     /// red rather than an empty one, because an empty ring says nothing.
     private var remaining: Double { overrun ? 1 : max(0.0001, 1 - progress) }
 
-    private var tail: Color { overrun ? Kerb.overdue : Kerb.amberDeep }
-    private var core: Color { overrun ? Kerb.overdue : Kerb.amber }
-    private var head: Color { overrun ? Kerb.overdueHot : Kerb.amberHot }
+    /// Both stops stay bright, so no part of the arc can be mistaken for an
+    /// unlit one.
+    private var lit: LinearGradient {
+        LinearGradient(
+            colors: overrun
+                ? [Kerb.overdueHot, Kerb.overdue]
+                : [Kerb.amberHot, Kerb.amber],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    private var halo: Color { overrun ? Kerb.overdue : Kerb.amber }
 
     var body: some View {
         ZStack {
@@ -42,34 +57,15 @@ struct CountdownRing: View {
             Circle()
                 .stroke(Kerb.chalkFaint.opacity(0.18), lineWidth: lineWidth)
 
-            // The filament, brightening towards its head.
+            // What is left of the allowance, in one unbroken stroke.
             Circle()
                 .trim(from: 0, to: remaining)
-                .stroke(
-                    AngularGradient(
-                        colors: [tail, core, head],
-                        center: .center,
-                        startAngle: .degrees(0),
-                        endAngle: .degrees(360 * remaining)
-                    ),
-                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
-                )
+                .stroke(lit, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-                .shadow(color: core.opacity(urgent || overrun ? 0.65 : 0.4), radius: urgent || overrun ? 14 : 8)
-
-            // The head itself, a bright point where the time is being spent.
-            // It is what turns an arc into something moving.
-            GeometryReader { geometry in
-                let side = min(geometry.size.width, geometry.size.height)
-                Circle()
-                    .fill(head)
-                    .frame(width: lineWidth * 0.62, height: lineWidth * 0.62)
-                    .shadow(color: head.opacity(0.9), radius: lineWidth * 0.7)
-                    .offset(y: -(side - lineWidth) / 2)
-                    .rotationEffect(.degrees(360 * remaining))
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                    .opacity(!overrun && progress > 0.002 && progress < 0.999 ? 1 : 0)
-            }
+                .shadow(
+                    color: halo.opacity(urgent || overrun ? 0.6 : 0.35),
+                    radius: urgent || overrun ? 14 : 9
+                )
         }
         .considerate(Kerb.Motion.track, value: progress)
         .modifier(Breathing(active: urgent && breathes && !reduceMotion))

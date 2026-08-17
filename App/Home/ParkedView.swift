@@ -232,8 +232,6 @@ struct ParkedView: View {
             Text("Where the car is").kerbLabel(Kerb.chalkDim, style: .caption)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            photoCard
-
             if controller.spot?.coordinate != nil {
                 Button { route = .walkBack } label: {
                     HStack(spacing: 14) {
@@ -270,16 +268,24 @@ struct ParkedView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            TextField(
-                "",
-                text: $note,
-                prompt: Text("Level 3, bay 12").foregroundStyle(Kerb.chalkFaint)
-            )
-            .font(Kerb.voice(.subheadline))
-            .foregroundStyle(Kerb.chalk)
-            .focused($noteFocused)
-            .submitLabel(.done)
-            .onSubmit { controller.setNote(note) }
+            photoCard
+
+            HStack(spacing: 11) {
+                Image(systemName: "pencil.line")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(noteFocused ? Kerb.amber : Kerb.chalkFaint)
+                TextField(
+                    "",
+                    text: $note,
+                    prompt: Text("Add a note — level 3, bay 12")
+                        .foregroundStyle(Kerb.chalkFaint)
+                )
+                .font(Kerb.voice(.subheadline))
+                .foregroundStyle(Kerb.chalk)
+                .focused($noteFocused)
+                .submitLabel(.done)
+                .onSubmit { controller.setNote(note) }
+            }
             .padding(14)
             .kerbCard(tint: noteFocused ? Kerb.amber : nil)
             .considerate(Kerb.Motion.settle, value: noteFocused)
@@ -390,9 +396,19 @@ struct ParkedView: View {
                         .kerbLabel(Kerb.chalkDim, style: .footnote)
                 }
             } else {
-                Button("Read the sign · optional") { route = .reader }
-                    .kerbLabel(Kerb.chalkDim, style: .footnote)
-                    .accessibilityIdentifier("read-sign")
+                Button {
+                    route = .reader
+                } label: {
+                    HStack(spacing: 9) {
+                        Image(systemName: "viewfinder")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Read the sign")
+                            .font(Kerb.voice(.subheadline))
+                    }
+                    .foregroundStyle(Kerb.chalkDim)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("read-sign")
             }
         }
         .entering(4)
@@ -415,7 +431,7 @@ struct ParkedView: View {
                 noteFocused = false
                 isCollecting = true
             }
-            .buttonStyle(PlateButton(kind: .enamel))
+            .buttonStyle(PlateButton(kind: .outlined))
             .accessibilityIdentifier("collect")
 
             switch reminders {
