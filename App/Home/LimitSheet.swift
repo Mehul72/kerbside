@@ -4,10 +4,11 @@ import SwiftUI
 
 /// Choosing what the countdown counts.
 ///
-/// The sign's own allowances come first, each stating which panel it was read
-/// from and what it means. Below them are plain durations, for a sign that
-/// said nothing about time, a sign that was not read, or a ticket that
-/// overrules it. Nothing is applied until it is tapped.
+/// The sign's own allowance comes first, stated in full, because it is the only
+/// option with provenance. Plain durations follow as a grid of chips: they are
+/// interchangeable and identically explained, so giving each one a full-width
+/// card with the same sentence under it spent most of the screen saying
+/// "counts down from now" seven times over.
 struct LimitSheet: View {
     @ObservedObject var controller: ParkingController
     @Environment(\.dismiss) private var dismiss
@@ -15,14 +16,16 @@ struct LimitSheet: View {
     private let timeZone = SharedContainer.timeZone
     private static let durations = [15, 30, 60, 120, 180, 240, 480]
 
+    private let columns = [GridItem(.adaptive(minimum: 84), spacing: 10)]
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 26) {
+                VStack(alignment: .leading, spacing: 24) {
                     if !controller.candidates.isEmpty {
                         section("From this sign") {
                             ForEach(Array(controller.candidates.enumerated()), id: \.offset) { _, candidate in
-                                Choice(
+                                SignChoice(
                                     title: Wording.describe(candidate.panel.restriction),
                                     detail: ParkWording.describe(candidate, in: timeZone),
                                     selected: isSelected(candidate),
@@ -36,18 +39,22 @@ struct LimitSheet: View {
                     }
 
                     section("Set it yourself") {
-                        ForEach(Self.durations, id: \.self) { minutes in
-                            Choice(
-                                title: Wording.duration(minutes),
-                                detail: "Counts down from now.",
-                                selected: isSelected(minutes: minutes),
-                                enabled: true
-                            ) {
-                                controller.setLimit(minutes: minutes)
-                                dismiss()
+                        LazyVGrid(columns: columns, spacing: 10) {
+                            ForEach(Self.durations, id: \.self) { minutes in
+                                Chip(
+                                    label: Self.short(minutes),
+                                    selected: isSelected(minutes: minutes)
+                                ) {
+                                    controller.setLimit(minutes: minutes)
+                                    dismiss()
+                                }
+                                .accessibilityIdentifier("duration-\(minutes)")
+                                .accessibilityLabel(Wording.duration(minutes))
                             }
-                            .accessibilityIdentifier("duration-\(minutes)")
                         }
+                        Text("Counts down from now.")
+                            .kerbCaption(Kerb.chalkFaint, style: .caption)
+                            .padding(.top, 2)
                     }
 
                     if controller.spot?.limit.expiry != nil {
@@ -81,6 +88,15 @@ struct LimitSheet: View {
         .preferredColorScheme(.dark)
     }
 
+    /// `1/4P`-style badges belong on a plate. A chip a person taps to set their
+    /// own limit says the duration plainly.
+    static func short(_ minutes: Int) -> String {
+        if minutes < 60 { return "\(minutes) min" }
+        let hours = minutes / 60
+        let rest = minutes % 60
+        return rest == 0 ? "\(hours) hr" : "\(hours) hr \(rest)"
+    }
+
     private func isSelected(_ candidate: LimitCandidate) -> Bool {
         controller.spot?.limit == candidate.limit
     }
@@ -101,10 +117,34 @@ struct LimitSheet: View {
         }
     }
 
-    /// One offer. A candidate whose restriction lifts before its allowance is
-    /// used up has nothing to count down, so it is shown and explained but
-    /// cannot be picked.
-    private struct Choice: View {
+    /// One plain duration. Small, because there is nothing to say about it.
+    private struct Chip: View {
+        let label: String
+        let selected: Bool
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                Text(label)
+                    .kerbCaption(
+                        selected ? Kerb.amber : Kerb.chalk,
+                        style: .subheadline,
+                        weight: .medium
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .kerbCard(selected ? .primary : .secondary, radius: 11,
+                              tint: selected ? Kerb.amber : nil)
+            }
+            .kerbPressable()
+        }
+    }
+
+    /// The sign's own allowance. Full width, because unlike a plain duration it
+    /// has something to explain.
+    private struct SignChoice: View {
         let title: String
         let detail: String
         let selected: Bool
@@ -116,8 +156,11 @@ struct LimitSheet: View {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(title)
-                            .font(Kerb.voice(.headline))
-                            .foregroundStyle(enabled ? Kerb.chalk : Kerb.chalkDim)
+                            .kerbCaption(
+                                enabled ? Kerb.chalk : Kerb.chalkDim,
+                                style: .subheadline,
+                                weight: .semibold
+                            )
                         Text(detail)
                             .font(Kerb.voice(.footnote))
                             .foregroundStyle(Kerb.chalkDim)
@@ -132,7 +175,7 @@ struct LimitSheet: View {
                 }
                 .padding(15)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .kerbCard(tint: selected ? Kerb.amber : nil)
+                .kerbCard(selected ? .primary : .secondary, tint: selected ? Kerb.amber : nil)
             }
             .kerbPressable()
             .disabled(!enabled)

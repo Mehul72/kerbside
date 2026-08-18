@@ -1,21 +1,58 @@
 import SwiftUI
 
+/// How much presence a surface has.
+///
+/// A screen where every card is drawn identically has no hierarchy inside its
+/// sections: the row you act on looks exactly like the note you ignore. These
+/// are the three weights anything containing gets to be.
+enum KerbWeight {
+    /// The row this section exists for.
+    case primary
+    /// Supporting, and most things.
+    case secondary
+    /// Incidental — a note, a field, something you add if you feel like it.
+    case quiet
+
+    var fill: (top: Double, bottom: Double) {
+        switch self {
+        case .primary: (0.13, 0.055)
+        case .secondary: (0.085, 0.035)
+        case .quiet: (0.045, 0.02)
+        }
+    }
+
+    var edge: (top: Double, bottom: Double) {
+        switch self {
+        case .primary: (0.30, 0.07)
+        case .secondary: (0.20, 0.05)
+        case .quiet: (0.11, 0.03)
+        }
+    }
+
+    var shadow: Double {
+        switch self {
+        case .primary: 0.4
+        case .secondary: 0.28
+        case .quiet: 0
+        }
+    }
+}
+
 /// The surfaces things sit on.
 ///
-/// A flat panel of five percent white on black is what a dark interface looks
-/// like before anybody has thought about it. Everything here is one idea: light
-/// falls from above. A card catches a hairline of it along its top edge and
-/// loses it towards the bottom, which is enough to make a surface read as a
-/// raised object rather than as a hole cut in the background.
+/// Everything here is one idea: light falls from above. A card catches a
+/// hairline of it along its top edge and loses it towards the bottom, which is
+/// enough to make a surface read as a raised object rather than as a hole cut
+/// in the background. The tint is cool, to match the ground.
 extension View {
 
-    /// A raised panel. The default for anything tappable or containing.
     func kerbCard(
+        _ weight: KerbWeight = .secondary,
         radius: CGFloat = 14,
         dashed: Bool = false,
         tint: Color? = nil
     ) -> some View {
-        modifier(KerbCard(radius: radius, dashed: dashed, tint: tint))
+        modifier(KerbCard(weight: weight, radius: radius, dashed: dashed, tint: tint))
     }
 
     /// Presses inwards a little. Used with `kerbCard` on anything that acts.
@@ -25,6 +62,7 @@ extension View {
 }
 
 private struct KerbCard: ViewModifier {
+    let weight: KerbWeight
     let radius: CGFloat
     let dashed: Bool
     let tint: Color?
@@ -33,14 +71,21 @@ private struct KerbCard: ViewModifier {
         RoundedRectangle(cornerRadius: radius, style: .continuous)
     }
 
+    private var base: Color { tint ?? Kerb.slate }
+    private var line: Color { tint ?? Kerb.chalk }
+
     func body(content: Content) -> some View {
+        let fill = weight.fill
+        let edge = weight.edge
+        let tinted = tint != nil
+
         content
             .background {
                 shape.fill(
                     LinearGradient(
                         colors: [
-                            (tint ?? Color.white).opacity(tint == nil ? 0.075 : 0.11),
-                            (tint ?? Color.white).opacity(tint == nil ? 0.028 : 0.04),
+                            base.opacity(tinted ? fill.top * 1.4 : fill.top),
+                            base.opacity(tinted ? fill.bottom * 1.4 : fill.bottom),
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -53,8 +98,8 @@ private struct KerbCard: ViewModifier {
                 shape.strokeBorder(
                     LinearGradient(
                         colors: [
-                            (tint ?? Kerb.chalk).opacity(tint == nil ? 0.22 : 0.5),
-                            (tint ?? Kerb.chalk).opacity(0.05),
+                            line.opacity(tinted ? 0.5 : edge.top),
+                            line.opacity(edge.bottom),
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -63,7 +108,7 @@ private struct KerbCard: ViewModifier {
                 )
             }
             .clipShape(shape)
-            .shadow(color: .black.opacity(0.35), radius: 12, y: 5)
+            .shadow(color: .black.opacity(weight.shadow), radius: 12, y: 5)
     }
 }
 
@@ -96,7 +141,7 @@ struct Hairline: View {
 
 /// The light the countdown throws onto the ground behind it.
 ///
-/// The app's one hero element is a burning-down ring, and a light source with
+/// The app's one hero element is a ring burning down, and a light source with
 /// nothing to fall on does not read as a light source. Kept very low so it
 /// suggests depth without becoming a glow effect in its own right.
 struct HeroGlow: View {

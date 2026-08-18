@@ -96,9 +96,7 @@ struct PastSpotsView: View {
                     .foregroundStyle(Kerb.chalk)
 
                     if !spot.note.isEmpty {
-                        Text(spot.note)
-                            .font(Kerb.voice(.footnote))
-                            .foregroundStyle(Kerb.chalkDim)
+                        Text(spot.note).kerbCaption(style: .footnote)
                     }
 
                     if let collected = spot.collectedAt {
@@ -111,8 +109,7 @@ struct PastSpotsView: View {
 
                     if spot.sign == nil {
                         Text("No sign read")
-                            .font(Kerb.data(11))
-                            .foregroundStyle(Kerb.chalkFaint)
+                            .kerbCaption(Kerb.chalkFaint, style: .caption2)
                     }
                 }
 
@@ -120,7 +117,7 @@ struct PastSpotsView: View {
             }
             .padding(15)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .kerbCard()
+            .kerbCard(.secondary)
         }
     }
 }

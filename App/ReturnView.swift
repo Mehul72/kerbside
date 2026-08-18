@@ -13,12 +13,15 @@ struct ReturnView: View {
     @ObservedObject var controller: ParkingController
     @Environment(\.dismiss) private var dismiss
 
+    /// The hero number was the last fixed point size on this screen.
+    @ScaledMetric(relativeTo: .largeTitle) private var distanceScale: CGFloat = 1
+
     var body: some View {
         ZStack {
             Kerb.asphalt.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 20)
+            VStack(spacing: 22) {
+                Spacer(minLength: 8)
 
                 ZStack {
                     HeroGlow(strength: 0.14)
@@ -27,24 +30,19 @@ struct ReturnView: View {
                         heading: controller.location.hasCompass ? controller.location.heading : nil
                     )
                 }
-                .frame(width: 250, height: 250)
-
-                Spacer(minLength: 26)
+                .frame(width: 232, height: 232)
 
                 readout
-
-                Spacer(minLength: 26)
-
                 footer
 
-                Spacer(minLength: 16)
+                Spacer(minLength: 8)
             }
             .padding(.horizontal, 28)
         }
         .preferredColorScheme(.dark)
         .overlay(alignment: .topTrailing) {
             Button("Done") { dismiss() }
-                .kerbLabel(Kerb.chalkDim, style: .footnote)
+                .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
                 .accessibilityIdentifier("done")
                 .padding(22)
         }
@@ -59,7 +57,7 @@ struct ReturnView: View {
         VStack(spacing: 8) {
             if let metres = controller.metresAway {
                 Text(Geo.describe(metres: metres))
-                    .font(.system(size: 52, weight: .semibold, design: .rounded))
+                    .font(.system(size: 48 * distanceScale, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(Kerb.chalk)
                     .considerate(Kerb.Motion.track, value: Int(metres))
@@ -70,8 +68,7 @@ struct ReturnView: View {
                 }
 
                 Text("About \(Geo.walkingMinutes(metres: metres)) minutes on foot.")
-                    .font(Kerb.voice(.footnote))
-                    .foregroundStyle(Kerb.chalkDim)
+                    .kerbCaption(style: .footnote)
             } else {
                 Text("Finding you")
                     .font(Kerb.voice(.title3))
@@ -96,28 +93,24 @@ struct ReturnView: View {
             if let photo = controller.photo {
                 Image(uiImage: photo)
                     .resizable()
-                    .scaledToFill()
-                    .frame(height: 110)
-                    .clipped()
+                    .scaledToFit()
+                    .frame(maxHeight: 190)
                     .kerbCard()
                     .accessibilityLabel("Photograph of your parked car")
             }
 
             if let note = controller.spot?.note, !note.isEmpty {
                 Text(note)
-                    .font(Kerb.voice(.headline))
-                    .foregroundStyle(Kerb.chalk)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 10)
-                    .kerbCard(radius: 22)
+                    .kerbCaption(Kerb.chalk, style: .subheadline, weight: .medium)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
+                    .kerbCard(.quiet, radius: 20)
             }
 
             if !controller.location.hasCompass, controller.bearing != nil {
-                Text("No compass on this device, so the needle points from north rather than from the way you are facing.")
-                    .font(Kerb.voice(.footnote))
-                    .foregroundStyle(Kerb.chalkFaint)
+                Text("Measured from north, not from the way you are facing.")
+                    .kerbCaption(Kerb.chalkFaint, style: .caption)
                     .multilineTextAlignment(.center)
-                    .frame(maxWidth: 300)
             }
 
             if let car = controller.spot?.coordinate {
@@ -126,8 +119,7 @@ struct ReturnView: View {
                     .frame(maxWidth: 300)
 
                 Text("Opens Apple Maps. Kerbside itself never goes online.")
-                    .font(Kerb.voice(.caption2))
-                    .foregroundStyle(Kerb.chalkFaint)
+                    .kerbCaption(Kerb.chalkFaint, style: .caption2)
             }
         }
     }
@@ -172,7 +164,7 @@ struct BearingNeedle: View {
                 Circle()
                     .stroke(Kerb.chalkFaint.opacity(0.22), lineWidth: 1)
 
-                ForEach(0..<8) { tick in
+                ForEach(1..<8) { tick in
                     Capsule()
                         .fill(Kerb.chalkFaint.opacity(tick % 2 == 0 ? 0.5 : 0.25))
                         .frame(width: side * 0.012, height: side * (tick % 2 == 0 ? 0.045 : 0.025))
@@ -181,17 +173,48 @@ struct BearingNeedle: View {
                 }
 
                 if bearing != nil {
-                    Needle()
-                        .fill(Kerb.amber)
-                        .frame(width: side * 0.19, height: side * 0.38)
-                        .shadow(color: Kerb.amber.opacity(0.45), radius: side * 0.06)
-                        .rotationEffect(.degrees(angle))
-                        .considerate(Kerb.Motion.track, value: angle)
+                    // The needle lives at the top of a box the size of the
+                    // dial, so rotating the box swings it around the hub. A
+                    // needle rotated about its own centre floats in the middle
+                    // and never reads as being mounted on anything.
+                    ZStack(alignment: .top) {
+                        Color.clear
+                        Needle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Kerb.amberHot, Kerb.amber],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: side * 0.155, height: side * 0.37)
+                            .shadow(color: Kerb.amber.opacity(0.5), radius: side * 0.045)
+                            // Stops short of the rim, so it never covers a
+                            // dial marking.
+                            .padding(.top, side * 0.115)
+                    }
+                    .frame(width: side, height: side)
+                    .rotationEffect(.degrees(angle))
+                    .considerate(Kerb.Motion.track, value: angle)
+
+                    // The hub the needle turns on.
+                    Circle()
+                        .fill(Kerb.asphaltRaised)
+                        .frame(width: side * 0.075, height: side * 0.075)
+                        .overlay(Circle().strokeBorder(Kerb.amber.opacity(0.55), lineWidth: 1))
                 } else {
                     Image(systemName: "location.slash")
                         .font(.system(size: side * 0.22, weight: .light))
                         .foregroundStyle(Kerb.chalkFaint)
                 }
+
+                // North, named, and drawn over everything. A dial with an N on
+                // it explains the whole of the no-compass case in one glyph,
+                // where a paragraph was doing that job before.
+                Text("N")
+                    .font(.system(size: side * 0.08, weight: .semibold))
+                    .foregroundStyle(Kerb.chalkDim)
+                    .offset(y: -side * 0.44)
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }

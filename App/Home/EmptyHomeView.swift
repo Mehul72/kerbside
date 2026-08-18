@@ -59,7 +59,7 @@ struct EmptyHomeView: View {
                                 Image(systemName: "viewfinder")
                                     .font(.system(size: 13, weight: .semibold))
                                 Text("Read a sign first")
-                                    .font(Kerb.voice(.subheadline))
+                                    .font(Kerb.ui(.subheadline, weight: .medium))
                             }
                             .foregroundStyle(Kerb.chalkDim)
                         }
@@ -74,8 +74,7 @@ struct EmptyHomeView: View {
                             "Location is off for Kerbside, so a spot will remember the "
                                 + "time and the sign but not the place."
                         )
-                        .font(Kerb.voice(.footnote))
-                        .foregroundStyle(Kerb.chalkFaint)
+                        .kerbCaption(Kerb.chalkFaint, style: .footnote)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 290)
                         .padding(.top, 16)
@@ -85,10 +84,7 @@ struct EmptyHomeView: View {
 
                     if !controller.record.past.isEmpty {
                         Button("Past spots") { route = .past }
-                            .font(Kerb.label(.footnote))
-                            .tracking(1.4)
-                            .textCase(.uppercase)
-                            .foregroundStyle(Kerb.chalkDim)
+                            .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
                             .entering(3)
                     }
 

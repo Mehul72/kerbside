@@ -111,8 +111,18 @@ struct ParkedView: View {
             }
             Spacer()
             if !controller.record.past.isEmpty {
-                Button("Past") { route = .past }
-                    .kerbLabel(Kerb.chalkDim, style: .caption)
+                Button {
+                    route = .past
+                } label: {
+                    HStack(spacing: 3) {
+                        Text("Past")
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("past")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -146,9 +156,9 @@ struct ParkedView: View {
                         CountdownFigure(
                             expiry: reading?.expiry,
                             now: context.date,
-                            size: 40
+                            size: 40,
+                            reservesWidth: true
                         )
-                        .frame(width: 150)
                         Text(caption(for: reading))
                             .kerbLabel(
                                 reading?.overrun == true ? Kerb.overdue : Kerb.chalkDim,
@@ -174,7 +184,7 @@ struct ParkedView: View {
                 Button(controller.spot?.limit.expiry == nil ? "Set a limit" : "Change limit") {
                     isEditingLimit = true
                 }
-                .kerbLabel(Kerb.amber, style: .footnote)
+                .kerbCaption(Kerb.amber, style: .subheadline, weight: .medium)
                 .accessibilityIdentifier("edit-limit")
             }
         }
@@ -244,8 +254,7 @@ struct ParkedView: View {
                                 .foregroundStyle(Kerb.chalk)
                                 .considerate(Kerb.Motion.track, value: controller.distance)
                             Text(detail)
-                                .font(Kerb.voice(.footnote))
-                                .foregroundStyle(Kerb.chalkDim)
+                                .kerbCaption(style: .footnote)
                         }
 
                         Spacer(minLength: 0)
@@ -254,7 +263,7 @@ struct ParkedView: View {
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity)
-                    .kerbCard()
+                    .kerbCard(.primary)
                 }
                 .kerbPressable()
                 .accessibilityIdentifier("walk-back")
@@ -287,7 +296,7 @@ struct ParkedView: View {
                 .onSubmit { controller.setNote(note) }
             }
             .padding(14)
-            .kerbCard(tint: noteFocused ? Kerb.amber : nil)
+            .kerbCard(.quiet, tint: noteFocused ? Kerb.amber : nil)
             .considerate(Kerb.Motion.settle, value: noteFocused)
             .onChange(of: noteFocused) { _, focused in
                 if !focused { controller.setNote(note) }
@@ -304,16 +313,8 @@ struct ParkedView: View {
             Button { isShowingPhoto = true } label: {
                 Image(uiImage: photo)
                     .resizable()
-                    .scaledToFill()
-                    .frame(height: 170)
-                    .clipped()
-                    .overlay(alignment: .bottomLeading) {
-                        Text("Your car")
-                            .kerbLabel(Kerb.chalk, style: .caption2)
-                            .padding(10)
-                            .background(.black.opacity(0.45), in: Capsule())
-                            .padding(10)
-                    }
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
                     .kerbCard()
             }
             .kerbPressable()
@@ -340,11 +341,9 @@ struct ParkedView: View {
                 .foregroundStyle(Kerb.amber)
             VStack(alignment: .leading, spacing: 2) {
                 Text(cameraAvailable ? "Photograph the car" : "Add a photo of the car")
-                    .font(Kerb.voice(.headline))
-                    .foregroundStyle(Kerb.chalk)
+                    .kerbCaption(Kerb.chalk, style: .subheadline, weight: .medium)
                 Text("The quickest way to find it again.")
-                    .font(Kerb.voice(.footnote))
-                    .foregroundStyle(Kerb.chalkDim)
+                    .kerbCaption(style: .footnote)
             }
             Spacer(minLength: 0)
         }
@@ -373,10 +372,13 @@ struct ParkedView: View {
                                 size: 13
                             )
                         }
-                        Text(summary(of: sign))
-                            .font(Kerb.voice(.footnote))
-                            .foregroundStyle(Kerb.chalkDim)
-                            .lineLimit(1)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(hours(of: sign))
+                                .kerbCaption(Kerb.chalk, style: .subheadline, weight: .medium)
+                            if let extra = others(of: sign) {
+                                Text(extra).kerbCaption(style: .caption)
+                            }
+                        }
                         Spacer(minLength: 0)
                         Image(systemName: isShowingSign ? "chevron.up" : "chevron.down")
                             .font(.system(size: 12, weight: .semibold))
@@ -403,7 +405,7 @@ struct ParkedView: View {
                         Image(systemName: "viewfinder")
                             .font(.system(size: 13, weight: .semibold))
                         Text("Read the sign")
-                            .font(Kerb.voice(.subheadline))
+                            .font(Kerb.ui(.subheadline, weight: .medium))
                     }
                     .foregroundStyle(Kerb.chalkDim)
                 }
@@ -414,13 +416,25 @@ struct ParkedView: View {
         .entering(4)
     }
 
-    /// The sign in one line, for the folded state.
-    private func summary(of sign: Sign) -> String {
+    /// The governing panel's hours, short enough to fit on one line beside a
+    /// badge.
+    ///
+    /// The whole sentence used to go here and be cut off mid-word — "2 hour
+    /// parking, every day, 6am to 11pm · 1…" — which told a reader nothing and
+    /// looked like a fault. The badge already carries the allowance, so this
+    /// only has to carry when it applies.
+    private func hours(of sign: Sign) -> String {
         guard let panel = sign.parsedPanels.first else { return "Not read" }
-        var text = Wording.describe(panel)
-        let others = sign.panels.count - 1
-        if others > 0 { text += " · \(others) more" }
-        return text
+        let days = Wording.describe(panel.days)
+        let times = Wording.describe(panel.times)
+        return times == "at all times" ? days.capitalisedFirst : "\(days), \(times)".capitalisedFirst
+    }
+
+    /// What else is on the pole, counted rather than spelled out.
+    private func others(of sign: Sign) -> String? {
+        let rest = sign.panels.count - 1
+        guard rest > 0 else { return nil }
+        return rest == 1 ? "1 more panel" : "\(rest) more panels"
     }
 
     // MARK: - Actions
@@ -496,5 +510,15 @@ private struct PhotoView: View {
             }
         }
         .preferredColorScheme(.dark)
+    }
+}
+
+
+extension String {
+    /// Sentence case, for phrases SignKit hands over in lower case because they
+    /// are normally used mid-sentence.
+    var capitalisedFirst: String {
+        guard let first else { return self }
+        return first.uppercased() + dropFirst()
     }
 }

@@ -115,7 +115,38 @@ struct CountdownFigure: View {
 
     var size: CGFloat = 34
 
+    /// Whether to hold the widest shape the figure will ever take.
+    ///
+    /// A count crossing an hour goes from `59:59` to `1:00:00`, and without a
+    /// reserved width everything under it jumps sideways at that moment. Off in
+    /// widgets, where the space is too tight to spend on a digit that is not
+    /// there yet.
+    var reservesWidth: Bool = false
+
+    /// Scales with the reader's text size. The hero numbers were the one place
+    /// in the app still pinned to a fixed point size.
+    @ScaledMetric(relativeTo: .largeTitle) private var scale: CGFloat = 1
+
+    private var pointSize: CGFloat { size * scale }
+
     var body: some View {
+        figure
+            .font(.system(size: pointSize, weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .background(alignment: .center) {
+                if reservesWidth {
+                    // Sets the width and is never seen.
+                    Text("0:00:00")
+                        .font(.system(size: pointSize, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .hidden()
+                }
+            }
+    }
+
+    private var figure: some View {
         Group {
             if let expiry {
                 if expiry > now {
@@ -134,10 +165,6 @@ struct CountdownFigure: View {
                 Text("—").foregroundStyle(Kerb.chalkDim)
             }
         }
-        .font(.system(size: size, weight: .semibold, design: .rounded))
-        .monospacedDigit()
-        .lineLimit(1)
-        .minimumScaleFactor(0.5)
     }
 }
 

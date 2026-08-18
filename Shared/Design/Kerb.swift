@@ -15,8 +15,16 @@ enum Kerb {
 
     /// Night asphalt. The ground is dark so a plate reads as a lit object
     /// rather than as a row in a table.
-    static let asphalt = Color(red: 0.055, green: 0.063, blue: 0.071)
-    static let asphaltRaised = Color(red: 0.094, green: 0.106, blue: 0.122)
+    ///
+    /// Cast cool on purpose. A neutral grey ground gives amber nothing to be
+    /// warm against, and the whole interface goes flat and slightly grim; a
+    /// blue-black makes the same amber read as a light source.
+    static let asphalt = Color(red: 0.039, green: 0.047, blue: 0.063)
+    static let asphaltRaised = Color(red: 0.075, green: 0.090, blue: 0.122)
+
+    /// What a raised surface is tinted with. Cool, so cards sit in the same
+    /// light as the ground rather than looking like grey paper laid on it.
+    static let slate = Color(red: 0.443, green: 0.510, blue: 0.616)
 
     // MARK: - The plate
 
@@ -32,9 +40,9 @@ enum Kerb {
 
     // MARK: - Interface
 
-    static let chalk = Color(red: 0.929, green: 0.922, blue: 0.902)
-    static let chalkDim = Color(red: 0.588, green: 0.612, blue: 0.639)
-    static let chalkFaint = Color(red: 0.365, green: 0.388, blue: 0.416)
+    static let chalk = Color(red: 0.933, green: 0.937, blue: 0.945)
+    static let chalkDim = Color(red: 0.588, green: 0.620, blue: 0.667)
+    static let chalkFaint = Color(red: 0.365, green: 0.396, blue: 0.443)
 
     /// The only accent, with one job: marking time. Amber is the third signal
     /// colour, so it stays inside the vocabulary of the street without
@@ -83,9 +91,24 @@ extension Kerb {
         .system(style, design: .serif, weight: .regular)
     }
 
-    /// Structure — section labels, time markers, the names of things.
+    /// Section headers, and nothing else.
+    ///
+    /// Expanded, tracked and uppercased is a lot of emphasis for a few words.
+    /// It was being spent on eight different things at once, which is the same
+    /// as spending it on none, so it is now reserved for the headers that
+    /// divide the screen into parts.
     static func label(_ style: Font.TextStyle = .caption) -> Font {
         .system(style, design: .default, weight: .semibold).width(.expanded)
+    }
+
+    /// Small interface text: captions under a control, secondary lines in a
+    /// row, the names of things inside a card.
+    ///
+    /// Sans rather than `voice`. The serif is handsome at twenty points and
+    /// mushy at ten on a dark ground, and it should be kept for sentences the
+    /// app is actually saying.
+    static func ui(_ style: Font.TextStyle = .footnote, weight: Font.Weight = .regular) -> Font {
+        .system(style, design: .default, weight: weight)
     }
 
     /// Machine output that was not understood. Monospace marks it as raw, so
@@ -127,8 +150,7 @@ enum PlateTone {
 // MARK: - Shared modifiers
 
 extension View {
-    /// Section labels and time markers share one treatment so that the same
-    /// kind of information always looks the same.
+    /// A section header. Loud on purpose, and therefore rare.
     func kerbLabel(
         _ colour: Color = Kerb.chalkDim,
         style: Font.TextStyle = .caption
@@ -137,5 +159,15 @@ extension View {
             .tracking(1.7)
             .textCase(.uppercase)
             .foregroundStyle(colour)
+    }
+
+    /// Quiet interface text. The default for anything that is not a header and
+    /// not a sentence.
+    func kerbCaption(
+        _ colour: Color = Kerb.chalkDim,
+        style: Font.TextStyle = .footnote,
+        weight: Font.Weight = .regular
+    ) -> some View {
+        font(Kerb.ui(style, weight: weight)).foregroundStyle(colour)
     }
 }
