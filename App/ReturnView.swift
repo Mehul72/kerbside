@@ -25,6 +25,12 @@ struct ReturnView: View {
                     VStack(spacing: 0) {
                         header
 
+                        // Capped, so most of the slack on a tall screen still
+                        // falls above the action at the bottom while the dial
+                        // gets a little air under the title rather than being
+                        // jammed against it.
+                        Spacer(minLength: 8).frame(maxHeight: 56)
+
                         ZStack {
                             HeroGlow(strength: 0.14)
                             BearingNeedle(
