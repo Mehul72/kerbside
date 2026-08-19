@@ -446,43 +446,73 @@ struct ParkedView: View {
     // MARK: - Actions
 
     private var actions: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
+            remindersNotice
+
             Button("I'm back at the car") {
                 noteFocused = false
                 isCollecting = true
             }
             .buttonStyle(PlateButton(kind: .outlined))
             .accessibilityIdentifier("collect")
-
-            switch reminders {
-            case .on:
-                EmptyView()
-
-            case .off:
-                Button("Turn on reminders") {
-                    Task {
-                        _ = await controller.requestReminders()
-                        reminders = await controller.reminderState()
-                    }
-                }
-                .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
-                .accessibilityIdentifier("reminders")
-                .padding(.top, 4)
-
-            case .refused:
-                // iOS will not ask twice, so offering the ask again would be a
-                // button that does nothing. Settings is the only way back.
-                Button("Reminders are off · open Settings") {
-                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-                    UIApplication.shared.open(url)
-                }
-                .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
-                .accessibilityIdentifier("reminders-settings")
-                .padding(.top, 4)
-            }
         }
         .frame(maxWidth: 320)
         .entering(5)
+    }
+
+    /// Said plainly, and above the button rather than under it.
+    ///
+    /// Kerbside's whole promise is that it tells you before your time runs
+    /// out, and with reminders off it cannot keep that promise. That was
+    /// reported by a single line of link text at the very bottom of a long
+    /// scroll — the quietest thing on the screen was the one telling you the
+    /// app would not do its job. It states the consequence now, and it is a
+    /// notice rather than a shout because nothing has gone wrong yet.
+    @ViewBuilder
+    private var remindersNotice: some View {
+        switch reminders {
+        case .on:
+            EmptyView()
+
+        case .off:
+            notice("Turn on reminders", id: "reminders") {
+                Task {
+                    _ = await controller.requestReminders()
+                    reminders = await controller.reminderState()
+                }
+            }
+
+        case .refused:
+            // iOS will not ask twice, so offering the ask again would be a
+            // button that does nothing. Settings is the only way back.
+            notice("Open Settings", id: "reminders-settings") {
+                guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                UIApplication.shared.open(url)
+            }
+        }
+    }
+
+    private func notice(
+        _ action: String,
+        id: String,
+        perform: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Reminders are off, so Kerbside cannot tell you before the limit runs out.")
+                .font(Kerb.voice(.footnote))
+                .foregroundStyle(Kerb.chalkDim)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Chalk, not amber: the accent marks a reading Kerbside took or
+            // the control that sets one, and turning on notifications is
+            // neither.
+            Button(action, action: perform)
+                .kerbCaption(Kerb.chalk, style: .subheadline, weight: .semibold)
+                .accessibilityIdentifier(id)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .kerbCard(.quiet)
     }
 }
 
