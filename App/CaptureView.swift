@@ -165,8 +165,15 @@ struct ActionBar: View {
     }
 }
 
-/// Buttons borrow the plate's construction: enamel face with a green rule for
-/// the primary action, a plain outline for everything else.
+/// Buttons borrow the plate's construction — an enamel face with an inset rule
+/// — but never its colours.
+///
+/// The primary action used to be lettered and ruled in `signGreen`, which is
+/// the colour a street uses to permit something. On a button that says "park
+/// here" that reads as the sign granting permission, which is the one thing
+/// this app will not do: green belongs to the plate, and a button is Kerbside
+/// speaking. Inked in asphalt instead, the enamel still reads as the app's own
+/// material without claiming a verdict.
 struct PlateButton: ButtonStyle {
     enum Kind {
         case enamel
@@ -180,14 +187,14 @@ struct PlateButton: ButtonStyle {
             .font(Kerb.label(.subheadline))
             .tracking(1.4)
             .textCase(.uppercase)
-            .foregroundStyle(kind == .enamel ? Kerb.signGreen : Kerb.chalk)
+            .foregroundStyle(kind == .enamel ? Kerb.asphalt : Kerb.chalk)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(kind == .enamel ? Kerb.plate : Color.white.opacity(0.04))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(
-                        kind == .enamel ? Kerb.signGreen : Kerb.chalkFaint.opacity(0.7),
+                        kind == .enamel ? Kerb.asphalt.opacity(0.55) : Kerb.chalkFaint.opacity(0.7),
                         lineWidth: kind == .enamel ? 2.5 : 1
                     )
                     .padding(kind == .enamel ? 4 : 0)

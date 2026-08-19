@@ -24,7 +24,7 @@ struct EmptyHomeView: View {
                 .stroke(Kerb.chalkFaint.opacity(0.18), lineWidth: 11)
             Image(systemName: "car.fill")
                 .font(.system(size: 44, weight: .regular))
-                .foregroundStyle(Kerb.chalkFaint)
+                .foregroundStyle(Kerb.chalkDim)
         }
         .frame(width: 196, height: 196)
         .accessibilityHidden(true)
