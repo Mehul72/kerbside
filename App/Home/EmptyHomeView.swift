@@ -10,19 +10,35 @@ struct EmptyHomeView: View {
     @ObservedObject var controller: ParkingController
     @Binding var route: HomeView.Route?
 
+    /// The app's instrument, with nothing in it yet.
+    ///
+    /// This screen used to lead with a green enamel plate bolted to a pole,
+    /// which made a parking sign the largest object on the one screen that has
+    /// neither a sign nor a car. The subject here is the car, and the
+    /// instrument the app reads it with is the ring that counts a limit down,
+    /// so the empty state is that same ring at the same size, unlit. Parking
+    /// lights it.
+    private var restingDial: some View {
+        ZStack {
+            Circle()
+                .stroke(Kerb.chalkFaint.opacity(0.18), lineWidth: 11)
+            Image(systemName: "car.fill")
+                .font(.system(size: 44, weight: .regular))
+                .foregroundStyle(Kerb.chalkFaint)
+        }
+        .frame(width: 196, height: 196)
+        .accessibilityHidden(true)
+    }
+
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 0) {
-                    Spacer(minLength: 20)
+                    Spacer(minLength: 40)
 
-                    ZStack {
-                        PoleSpine().frame(height: 240)
-                        Wordmark()
-                    }
-                    .entering(0)
+                    restingDial.entering(0)
 
-                    Spacer(minLength: 30)
+                    Spacer(minLength: 36)
 
                     VStack(spacing: 10) {
                         Text("Nothing saved")

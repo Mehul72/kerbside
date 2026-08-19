@@ -104,7 +104,7 @@ struct PastSpotsView: View {
                             "Away for "
                                 + ParkWording.span(collected.timeIntervalSince(spot.parkedAt))
                         )
-                        .kerbLabel(Kerb.chalkFaint, style: .caption2)
+                        .kerbCaption(Kerb.chalkFaint, style: .caption2)
                     }
 
                     if spot.sign == nil {

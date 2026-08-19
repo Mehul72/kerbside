@@ -133,7 +133,7 @@ struct FirstRunView: View {
 
         var body: some View {
             VStack(alignment: .leading, spacing: 5) {
-                Text(title).kerbLabel(Kerb.chalkDim, style: .caption2)
+                Text(title).kerbSection(style: .caption)
                 Text(detail)
                     .font(Kerb.voice(.subheadline))
                     .foregroundStyle(Kerb.chalk)

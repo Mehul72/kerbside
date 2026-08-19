@@ -96,7 +96,7 @@ struct ParkedView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Parked").kerbLabel(Kerb.chalkDim, style: .caption)
+                Text("Parked").kerbSection()
                 if let spot = controller.spot {
                     Text(
                         ParkWording.dayAndClock(
@@ -204,7 +204,7 @@ struct ParkedView: View {
     private var suggestion: some View {
         if let candidate = controller.suggestion {
             VStack(spacing: 12) {
-                Text("The sign allows").kerbLabel(Kerb.chalkDim, style: .caption)
+                Text("The sign allows").kerbSection()
                 Text(ParkWording.describe(candidate, in: timeZone))
                     .font(Kerb.voice(.subheadline))
                     .foregroundStyle(Kerb.chalk)
@@ -239,14 +239,14 @@ struct ParkedView: View {
         VStack(spacing: 14) {
             Hairline()
 
-            Text("Where the car is").kerbLabel(Kerb.chalkDim, style: .caption)
+            Text("Where the car is").kerbSection()
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             if controller.spot?.coordinate != nil {
                 Button { route = .walkBack } label: {
                     HStack(spacing: 14) {
-                        BearingNeedle(bearing: controller.bearing, heading: nil)
-                            .frame(width: 42, height: 42)
+                        BearingNeedle(bearing: controller.bearing, heading: nil, compact: true)
+                            .frame(width: 44, height: 44)
 
                         VStack(alignment: .leading, spacing: 3) {
                             Text(controller.distance ?? placeholder)
@@ -334,22 +334,28 @@ struct ParkedView: View {
         }
     }
 
+    /// An offer, not an instruction.
+    ///
+    /// This was drawn in amber with the section's brightest text, which made
+    /// the optional extra louder than the row that walks you back to the car.
+    /// The accent is the app's own reading of something — a time, a bearing —
+    /// and an invitation to add a photograph is neither.
     private var photoInvitation: some View {
         HStack(spacing: 12) {
             Image(systemName: cameraAvailable ? "camera" : "photo.on.rectangle")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(Kerb.amber)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(Kerb.chalkDim)
             VStack(alignment: .leading, spacing: 2) {
                 Text(cameraAvailable ? "Photograph the car" : "Add a photo of the car")
-                    .kerbCaption(Kerb.chalk, style: .subheadline, weight: .medium)
+                    .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
                 Text("The quickest way to find it again.")
-                    .kerbCaption(style: .footnote)
+                    .kerbCaption(Kerb.chalkFaint, style: .footnote)
             }
             Spacer(minLength: 0)
         }
-        .padding(16)
+        .padding(15)
         .frame(maxWidth: .infinity)
-        .kerbCard(dashed: true)
+        .kerbCard(.quiet, dashed: true)
     }
 
     // MARK: - The sign, if there is one
@@ -395,7 +401,7 @@ struct ParkedView: View {
                         RuleNow(evaluation: evaluation, timeZone: timeZone)
                     }
                     Button("Read it again") { route = .reader }
-                        .kerbLabel(Kerb.chalkDim, style: .footnote)
+                        .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
                 }
             } else {
                 Button {
@@ -459,7 +465,7 @@ struct ParkedView: View {
                         reminders = await controller.reminderState()
                     }
                 }
-                .kerbLabel(Kerb.chalkDim, style: .footnote)
+                .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
                 .accessibilityIdentifier("reminders")
                 .padding(.top, 4)
 
@@ -470,7 +476,7 @@ struct ParkedView: View {
                     guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
                     UIApplication.shared.open(url)
                 }
-                .kerbLabel(Kerb.chalkDim, style: .footnote)
+                .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
                 .accessibilityIdentifier("reminders-settings")
                 .padding(.top, 4)
             }

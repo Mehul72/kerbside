@@ -44,9 +44,12 @@ enum Kerb {
     static let chalkDim = Color(red: 0.588, green: 0.620, blue: 0.667)
     static let chalkFaint = Color(red: 0.365, green: 0.396, blue: 0.443)
 
-    /// The only accent, with one job: marking time. Amber is the third signal
-    /// colour, so it stays inside the vocabulary of the street without
-    /// colliding with the two that carry meaning on a plate.
+    /// The only accent, and it marks a reading Kerbside took: a limit counting
+    /// down, a bearing to the car, the compass point that bearing lands on.
+    /// Amber is the third signal colour, so it stays inside the vocabulary of
+    /// the street without colliding with the two that carry meaning on a
+    /// plate — and because it means "this is a measurement", it is never spent
+    /// on an ordinary control or an optional extra.
     static let amber = Color(red: 0.918, green: 0.647, blue: 0.098)
 
     /// The same amber, hotter and cooler, for the length of the countdown arc.
@@ -91,12 +94,13 @@ extension Kerb {
         .system(style, design: .serif, weight: .regular)
     }
 
-    /// Section headers, and nothing else.
+    /// The one loud thing on a screen.
     ///
     /// Expanded, tracked and uppercased is a lot of emphasis for a few words.
-    /// It was being spent on eight different things at once, which is the same
-    /// as spending it on none, so it is now reserved for the headers that
-    /// divide the screen into parts.
+    /// Section headers used to take it, all of them at once, which is the same
+    /// as none of them taking it. It now marks a single reading per screen —
+    /// the word under the countdown, the compass point under the needle — and
+    /// headers are set with `kerbSection` instead.
     static func label(_ style: Font.TextStyle = .caption) -> Font {
         .system(style, design: .default, weight: .semibold).width(.expanded)
     }
@@ -150,7 +154,8 @@ enum PlateTone {
 // MARK: - Shared modifiers
 
 extension View {
-    /// A section header. Loud on purpose, and therefore rare.
+    /// The one loud thing on a screen. Rare, and enforced by being spent:
+    /// once a screen has used it, nothing else on that screen may.
     func kerbLabel(
         _ colour: Color = Kerb.chalkDim,
         style: Font.TextStyle = .caption
@@ -159,6 +164,20 @@ extension View {
             .tracking(1.7)
             .textCase(.uppercase)
             .foregroundStyle(colour)
+    }
+
+    /// A section header: the name of a part of the screen.
+    ///
+    /// Set plainly, because there are several of these on a screen and they
+    /// are signposts rather than statements. `kerbLabel` used to do this job,
+    /// and spending its expanded uppercase on every header meant a screen
+    /// shouted four times over and therefore ranked nothing. The loud face is
+    /// now kept for the one thing on a screen that has earned it.
+    func kerbSection(
+        _ colour: Color = Kerb.chalkDim,
+        style: Font.TextStyle = .subheadline
+    ) -> some View {
+        font(Kerb.ui(style, weight: .semibold)).foregroundStyle(colour)
     }
 
     /// Quiet interface text. The default for anything that is not a header and

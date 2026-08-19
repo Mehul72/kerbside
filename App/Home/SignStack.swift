@@ -97,7 +97,7 @@ struct RuleNow: View {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 7) {
                     Circle().fill(ink).frame(width: 6, height: 6)
-                    Text(label).kerbLabel(Kerb.chalkDim, style: .caption2)
+                    Text(label).kerbSection(style: .caption)
                 }
                 Text(text)
                     .font(Kerb.voice(.subheadline))

@@ -13,26 +13,30 @@ enum KerbWeight {
     /// Incidental — a note, a field, something you add if you feel like it.
     case quiet
 
+    /// The three weights were originally close enough together that a screen
+    /// of stacked cards read as one grey column: the row you act on looked
+    /// like the note you ignore. They are spread much further apart now, so
+    /// the order is legible at a glance rather than on inspection.
     var fill: (top: Double, bottom: Double) {
         switch self {
-        case .primary: (0.13, 0.055)
-        case .secondary: (0.085, 0.035)
-        case .quiet: (0.045, 0.02)
+        case .primary: (0.185, 0.075)
+        case .secondary: (0.075, 0.03)
+        case .quiet: (0.028, 0.012)
         }
     }
 
     var edge: (top: Double, bottom: Double) {
         switch self {
-        case .primary: (0.30, 0.07)
-        case .secondary: (0.20, 0.05)
-        case .quiet: (0.11, 0.03)
+        case .primary: (0.42, 0.09)
+        case .secondary: (0.16, 0.04)
+        case .quiet: (0.075, 0.02)
         }
     }
 
     var shadow: Double {
         switch self {
-        case .primary: 0.4
-        case .secondary: 0.28
+        case .primary: 0.5
+        case .secondary: 0.2
         case .quiet: 0
         }
     }
@@ -83,10 +87,16 @@ private struct KerbCard: ViewModifier {
             .background {
                 shape.fill(
                     LinearGradient(
-                        colors: [
-                            base.opacity(tinted ? fill.top * 1.4 : fill.top),
-                            base.opacity(tinted ? fill.bottom * 1.4 : fill.bottom),
-                        ],
+                        // A tint says "this one is chosen", and it says it
+                        // through its lit edge. The fill behind it is held at
+                        // one modest value rather than scaled off the weight:
+                        // a tinted card at `primary` weight came out a solid
+                        // amber-brown slab that read as a filled button, and
+                        // the colour stopped meaning selected and started
+                        // meaning loud.
+                        colors: tinted
+                            ? [base.opacity(0.13), base.opacity(0.05)]
+                            : [base.opacity(fill.top), base.opacity(fill.bottom)],
                         startPoint: .top,
                         endPoint: .bottom
                     )

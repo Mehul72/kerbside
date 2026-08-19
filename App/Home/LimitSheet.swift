@@ -58,11 +58,15 @@ struct LimitSheet: View {
                     }
 
                     if controller.spot?.limit.expiry != nil {
+                        // Undoing a choice, not making one. It was set as a
+                        // full-width outlined button, which made the least
+                        // wanted control in the sheet the most prominent.
                         Button("Remove the limit") {
                             controller.clearLimit()
                             dismiss()
                         }
-                        .buttonStyle(PlateButton(kind: .outlined))
+                        .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
                     Text(
@@ -112,7 +116,7 @@ struct LimitSheet: View {
         @ViewBuilder content: () -> some View
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).kerbLabel(Kerb.chalkDim, style: .caption)
+            Text(title).kerbSection()
             content()
         }
     }

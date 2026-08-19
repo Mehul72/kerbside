@@ -20,32 +20,45 @@ struct ReturnView: View {
         ZStack {
             Kerb.asphalt.ignoresSafeArea()
 
-            VStack(spacing: 22) {
-                Spacer(minLength: 8)
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        header
 
-                ZStack {
-                    HeroGlow(strength: 0.14)
-                    BearingNeedle(
-                        bearing: controller.bearing,
-                        heading: controller.location.hasCompass ? controller.location.heading : nil
-                    )
+                        ZStack {
+                            HeroGlow(strength: 0.14)
+                            BearingNeedle(
+                                bearing: controller.bearing,
+                                heading: controller.location.hasCompass
+                                    ? controller.location.heading
+                                    : nil
+                            )
+                        }
+                        .frame(width: 264, height: 264)
+                        .padding(.top, 10)
+
+                        readout.padding(.top, 24)
+
+                        context.padding(.top, 24)
+
+                        // The two ends of this screen are fixed to the top and
+                        // the bottom and this takes up whatever is left. It
+                        // used to be a pair of centring spacers, which stacked
+                        // everything into the middle third and left a third of
+                        // the screen empty above and below it.
+                        Spacer(minLength: 32)
+
+                        timeLeft
+                        actions.padding(.top, 14)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 20)
                 }
-                .frame(width: 232, height: 232)
-
-                readout
-                footer
-
-                Spacer(minLength: 8)
+                .scrollIndicators(.hidden)
             }
-            .padding(.horizontal, 28)
         }
         .preferredColorScheme(.dark)
-        .overlay(alignment: .topTrailing) {
-            Button("Done") { dismiss() }
-                .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
-                .accessibilityIdentifier("done")
-                .padding(22)
-        }
         .onAppear { controller.startTracking() }
         .onDisappear { controller.stopTracking() }
         .onChange(of: controller.location.current?.latitude) { _, _ in
@@ -53,16 +66,32 @@ struct ReturnView: View {
         }
     }
 
+    /// Names the screen rather than leaving a lone Done button floating over
+    /// an empty corner.
+    private var header: some View {
+        HStack {
+            Text("Walk back")
+                .font(Kerb.voice(.title3))
+                .foregroundStyle(Kerb.chalk)
+            Spacer()
+            Button("Done") { dismiss() }
+                .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
+                .accessibilityIdentifier("done")
+        }
+        .padding(.top, 6)
+    }
+
     private var readout: some View {
         VStack(spacing: 8) {
             if let metres = controller.metresAway {
                 Text(Geo.describe(metres: metres))
-                    .font(.system(size: 48 * distanceScale, weight: .semibold, design: .rounded))
+                    .font(.system(size: 52 * distanceScale, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(Kerb.chalk)
                     .considerate(Kerb.Motion.track, value: Int(metres))
 
                 if let bearing = controller.bearing {
+                    // This screen's one loud reading.
                     Text(Geo.compassPoint(bearing))
                         .kerbLabel(Kerb.amber, style: .subheadline)
                 }
@@ -86,16 +115,16 @@ struct ReturnView: View {
         }
     }
 
-    private var footer: some View {
+    /// What the last twenty metres need, which a bearing cannot give: a
+    /// picture of the car and whatever was written down about the spot.
+    private var context: some View {
         VStack(spacing: 12) {
-            // The last twenty metres are the hard part, and a photograph does
-            // more for them than any bearing can.
             if let photo = controller.photo {
                 Image(uiImage: photo)
                     .resizable()
                     .scaledToFit()
                     .frame(maxHeight: 190)
-                    .kerbCard()
+                    .kerbCard(.primary)
                     .accessibilityLabel("Photograph of your parked car")
             }
 
@@ -112,14 +141,61 @@ struct ReturnView: View {
                     .kerbCaption(Kerb.chalkFaint, style: .caption)
                     .multilineTextAlignment(.center)
             }
+        }
+    }
 
-            if let car = controller.spot?.coordinate {
+    /// How long is left, on the screen you are looking at while walking back.
+    ///
+    /// The two questions this app answers are how far and how long, and the
+    /// walk back only ever answered the first. Somebody is on this screen
+    /// precisely because the second one is pressing, and the space was empty
+    /// anyway. Quiet, because the needle is the hero here — and named, because
+    /// a countdown in this app always says where its number came from.
+    @ViewBuilder
+    private var timeLeft: some View {
+        if let limit = controller.spot?.limit, limit.expiry != nil {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let reading = CountdownReading(limit: limit, now: context.date)
+
+                HStack(spacing: 12) {
+                    CountdownFigure(expiry: reading.expiry, now: context.date, size: 22)
+                    Text(reading.overrun ? "over" : "left")
+                        .kerbCaption(
+                            reading.overrun ? Kerb.overdue : Kerb.chalkDim,
+                            style: .footnote,
+                            weight: .medium
+                        )
+                    Spacer(minLength: 8)
+                    Text(
+                        ParkWording.attribution(
+                            limit,
+                            at: context.date,
+                            in: SharedContainer.timeZone
+                        )
+                    )
+                    .kerbCaption(Kerb.chalkFaint, style: .caption2)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 180)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .kerbCard(.quiet)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var actions: some View {
+        if let car = controller.spot?.coordinate {
+            VStack(spacing: 10) {
                 Button("Walk me there") { openInMaps(car) }
                     .buttonStyle(PlateButton(kind: .outlined))
-                    .frame(maxWidth: 300)
+                    .frame(maxWidth: 320)
 
                 Text("Opens Apple Maps. Kerbside itself never goes online.")
                     .kerbCaption(Kerb.chalkFaint, style: .caption2)
+                    .multilineTextAlignment(.center)
             }
         }
     }
@@ -147,6 +223,14 @@ struct BearingNeedle: View {
     /// Which way the top of the device is facing, or nil when unknown.
     let heading: Double?
 
+    /// Drops the dial's markings and keeps only the needle.
+    ///
+    /// The same instrument was being drawn at forty points inside a row, where
+    /// eight tick marks and a lettered north are smaller than they are legible
+    /// and add up to a smudge. At that size the only thing worth reading is
+    /// which way the arrow points.
+    var compact: Bool = false
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var angle: Double {
@@ -162,14 +246,16 @@ struct BearingNeedle: View {
 
             ZStack {
                 Circle()
-                    .stroke(Kerb.chalkFaint.opacity(0.22), lineWidth: 1)
+                    .stroke(Kerb.chalkFaint.opacity(compact ? 0.3 : 0.22), lineWidth: 1)
 
-                ForEach(1..<8) { tick in
-                    Capsule()
-                        .fill(Kerb.chalkFaint.opacity(tick % 2 == 0 ? 0.5 : 0.25))
-                        .frame(width: side * 0.012, height: side * (tick % 2 == 0 ? 0.045 : 0.025))
-                        .offset(y: -side * 0.44)
-                        .rotationEffect(.degrees(Double(tick) * 45))
+                if !compact {
+                    ForEach(1..<8) { tick in
+                        Capsule()
+                            .fill(Kerb.chalkFaint.opacity(tick % 2 == 0 ? 0.5 : 0.25))
+                            .frame(width: side * 0.012, height: side * (tick % 2 == 0 ? 0.045 : 0.025))
+                            .offset(y: -side * 0.44)
+                            .rotationEffect(.degrees(Double(tick) * 45))
+                    }
                 }
 
                 if bearing != nil {
@@ -211,10 +297,12 @@ struct BearingNeedle: View {
                 // North, named, and drawn over everything. A dial with an N on
                 // it explains the whole of the no-compass case in one glyph,
                 // where a paragraph was doing that job before.
-                Text("N")
-                    .font(.system(size: side * 0.08, weight: .semibold))
-                    .foregroundStyle(Kerb.chalkDim)
-                    .offset(y: -side * 0.44)
+                if !compact {
+                    Text("N")
+                        .font(.system(size: side * 0.08, weight: .semibold))
+                        .foregroundStyle(Kerb.chalkDim)
+                        .offset(y: -side * 0.44)
+                }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
