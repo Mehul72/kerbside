@@ -38,7 +38,6 @@ xcrun simctl location "$UDID" set -33.8523,151.2108
 xcrun simctl status_bar "$UDID" override \
     --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
 
-GROUP=$(xcrun simctl get_app_container "$UDID" au.kerbside.Kerbside groups | awk '{print $2}')
 SIGN=$(swift run --package-path Packages/SignKit signread --json "2P
 6AM - 10PM
 
@@ -46,9 +45,19 @@ NO STOPPING
 6AM - 10AM
 MON - FRI" 2>/dev/null)
 
-python3 - "$GROUP" "$SIGN" <<'PY'
-import json, sys, datetime, uuid
-group, sign = sys.argv[1], json.loads(sys.argv[2])
+# The record is written by a watcher rather than once up front.
+#
+# `xcodebuild test` reinstalls the app, and reinstalling replaces the App Group
+# container with a fresh empty one, so anything seeded beforehand is gone by the
+# time the app reads it. This waits for the container and writes as soon as it
+# appears, which lands before the app's first read. It also finds the container
+# by its metadata, because `simctl get_app_container ... groups` reports nothing
+# for this group even when it exists.
+python3 - "$SIGN" "$UDID" <<'SEED' &
+import json, sys, datetime, uuid, time, plistlib, pathlib
+sign = json.loads(sys.argv[1])
+base = (pathlib.Path.home() / "Library/Developer/CoreSimulator/Devices"
+        / sys.argv[2] / "data/Containers/Shared/AppGroup")
 now = datetime.datetime.now(datetime.timezone.utc)
 parked = now - datetime.timedelta(minutes=48)
 expiry = parked + datetime.timedelta(minutes=120)
@@ -64,7 +73,7 @@ for days, note in ((1, "Level 3, bay 12"), (3, "Behind the pub"), (6, "Opposite 
         "collectedAt": stamp(at + datetime.timedelta(hours=1, minutes=20)),
     })
 
-open(group + "/parking.json", "w").write(json.dumps({
+record = json.dumps({
     "active": {
         "id": str(uuid.uuid4()), "parkedAt": stamp(parked),
         "coordinate": {"latitude": -33.8568, "longitude": 151.2153, "accuracy": 8},
@@ -72,16 +81,44 @@ open(group + "/parking.json", "w").write(json.dumps({
         "limit": {"expires": {"at": stamp(expiry), "source": {"sign": {"minutes": 120}}}},
     },
     "past": past,
-}))
-print("seeded a spot under a sign that is in force")
-PY
+})
+
+
+def containers():
+    for directory in base.glob("*/"):
+        meta = directory / ".com.apple.mobile_container_manager.metadata.plist"
+        try:
+            if plistlib.loads(meta.read_bytes())["MCMMetadataIdentifier"] == "group.au.kerbside":
+                yield directory
+        except Exception:
+            pass
+
+
+deadline = time.time() + 300
+seeded = set()
+while time.time() < deadline:
+    for directory in containers():
+        target = directory / "parking.json"
+        if directory not in seeded or not target.exists():
+            target.write_text(record)
+            seeded.add(directory)
+            print("seeded a spot under a sign that is in force", flush=True)
+    time.sleep(0.25)
+SEED
+SEEDER=$!
+trap 'kill $SEEDER 2>/dev/null || true' EXIT
+
+# A skipped run would otherwise hand back whatever a previous run left behind.
+find "$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data" \
+    -type d -name kerbside-store -exec rm -rf {} + 2>/dev/null || true
 
 xcodebuild -project Kerbside.xcodeproj -scheme Kerbside \
     -destination "platform=iOS Simulator,id=$UDID" \
     -only-testing:KerbsideUITests/StoreShotsTests test >/dev/null
+kill $SEEDER 2>/dev/null || true
 
 SHOTS=$(find "$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data" \
-    -type d -name kerbside-store | head -1)
+    -type d -name kerbside-store -exec stat -f "%m %N" {} + | sort -rn | head -1 | cut -d" " -f2-)
 [ -n "$SHOTS" ] || { echo "the test wrote no screenshots"; exit 1; }
 
 mkdir -p "$OUT"
