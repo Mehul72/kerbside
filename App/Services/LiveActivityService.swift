@@ -14,6 +14,12 @@ import ParkKit
 /// this one does not, so asking it every time is both simpler and the only
 /// version that cannot leave a stale banner behind.
 ///
+/// Nothing here serialises itself. `sync` reads the running activities and
+/// then starts one, and two calls overlapping across that gap will both find
+/// nothing and both start a banner — an activity has no stable identifier to
+/// deduplicate on the way a notification request does. Callers push through
+/// one queue for that reason.
+///
 /// Deliberately not bound to the main actor. An `Activity` is not `Sendable`,
 /// so a handle held on the main actor cannot be passed to ActivityKit's own
 /// non-isolated methods. Holding no state at all sidesteps that entirely.
@@ -48,8 +54,18 @@ struct LiveActivityService: Sendable {
 
         // Updating in place rather than restarting, so the Lock Screen does
         // not flash every time a distance changes.
-        if let existing = running(for: spotID) {
-            await existing.update(content)
+        //
+        // More than one activity can be running for the same car if two syncs
+        // ever raced, and a device that has already been left in that state
+        // will not fix itself: the extra banner is never found again, so it
+        // sits on the Lock Screen for ever saying whatever it said when it was
+        // started. The extras are ended here rather than only prevented.
+        let mine = running(for: spotID)
+        if let keep = mine.first {
+            for extra in mine.dropFirst() {
+                await extra.end(nil, dismissalPolicy: .immediate)
+            }
+            await keep.update(content)
             return
         }
 
@@ -68,7 +84,9 @@ struct LiveActivityService: Sendable {
         }
     }
 
-    private func running(for spotID: String) -> Activity<ParkingActivityAttributes>? {
-        Activity<ParkingActivityAttributes>.activities.first { $0.attributes.spotID == spotID }
+    /// Every activity running for this car. Normally none or one; more than
+    /// one means something started a second banner behind this one's back.
+    private func running(for spotID: String) -> [Activity<ParkingActivityAttributes>] {
+        Activity<ParkingActivityAttributes>.activities.filter { $0.attributes.spotID == spotID }
     }
 }

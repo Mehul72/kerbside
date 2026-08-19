@@ -35,6 +35,18 @@ final class ParkingController: ObservableObject {
     private let store = SharedContainer.store
     private let timeZone = SharedContainer.timeZone
     private var ruleChangeTask: Task<Void, Never>?
+
+    /// Banner pushes, chained so that only one runs at a time.
+    ///
+    /// Two paths push: `commit`, whenever the record changes, and
+    /// `refreshLiveDistance`, whenever a fix arrives. Saving a car fires both
+    /// within milliseconds — `park` commits, and the parked screen's `task`
+    /// immediately asks for a fix and pushes the distance it gets. Unordered,
+    /// both found no banner running for the new spot and both started one, and
+    /// the limit set a moment later only ever reached the first of them. That
+    /// is the second banner people saw on the Lock Screen, stuck for ever on
+    /// "No limit recorded".
+    private var activityPushes: Task<Void, Never>?
     private var locationChanges: AnyCancellable?
 
     var spot: ParkingSpot? { record.active }
@@ -304,7 +316,30 @@ final class ParkingController: ObservableObject {
     /// so this only fires when the distance has really changed.
     func refreshLiveDistance() {
         guard let spot = record.active else { return }
-        Task { await activities.sync(for: spot, distance: distance, now: Date(), in: timeZone) }
+        pushActivity(for: spot, now: Date())
+    }
+
+    /// Queues a banner push behind whatever is already in flight.
+    private func pushActivity(for spot: ParkingSpot, now: Date) {
+        let previous = activityPushes
+        let service = activities
+        let zone = timeZone
+        let distance = distance
+        activityPushes = Task {
+            await previous?.value
+            await service.sync(for: spot, distance: distance, now: now, in: zone)
+        }
+    }
+
+    /// Ends the banner, in the same queue, so it cannot overtake a push that
+    /// would start a new one after it.
+    private func endActivity() {
+        let previous = activityPushes
+        let service = activities
+        activityPushes = Task {
+            await previous?.value
+            await service.endAll()
+        }
     }
 
     // MARK: - Writing
@@ -326,10 +361,13 @@ final class ParkingController: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
 
         if let spot = record.active {
-            let distance = distance
             let walk = walkingMinutes
+            pushActivity(for: spot, now: now)
+            // Not queued behind the banner. A reminder is identified by the
+            // spot and the reason it exists, so adding one replaces the one it
+            // supersedes and racing reschedules cannot stack up the way two
+            // banners can.
             Task {
-                await activities.sync(for: spot, distance: distance, now: now, in: timeZone)
                 await reminders.reschedule(
                     for: spot,
                     now: now,
@@ -338,10 +376,8 @@ final class ParkingController: ObservableObject {
                 )
             }
         } else {
-            Task {
-                await activities.endAll()
-                await reminders.clear()
-            }
+            endActivity()
+            Task { await reminders.clear() }
         }
     }
 

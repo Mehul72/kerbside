@@ -26,6 +26,11 @@ final class IslandTests: XCTestCase {
         quarterHour.tap()
         XCTAssertTrue(app.staticTexts["limit-attribution"].waitForExistence(timeout: 10))
 
+        // The first activity a device ever runs asks permission, and the
+        // prompt sits over the very surfaces this photographs.
+        let allow = springboard.buttons["Allow"]
+        if allow.waitForExistence(timeout: 4) { allow.tap() }
+
         XCUIDevice.shared.press(.home)
         Thread.sleep(forTimeInterval: 4)
         capture("island-compact")
