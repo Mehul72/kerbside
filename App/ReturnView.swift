@@ -164,7 +164,7 @@ struct ReturnView: View {
                 let reading = CountdownReading(limit: limit, now: context.date)
 
                 HStack(spacing: 12) {
-                    CountdownFigure(expiry: reading.expiry, now: context.date, size: 22)
+                    CountdownFigure(expiry: reading.expiry, now: context.date, size: 22, alignment: .leading)
                     Text(reading.overrun ? "over" : "left")
                         .kerbCaption(
                             reading.overrun ? Kerb.overdue : Kerb.chalkDim,

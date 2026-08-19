@@ -158,7 +158,7 @@ struct SpotWidgetView: View {
 
                 Spacer(minLength: 0)
 
-                CountdownFigure(expiry: reading.expiry, now: entry.date, size: 30)
+                CountdownFigure(expiry: reading.expiry, now: entry.date, size: 30, alignment: .leading)
                 Text(caption(for: spot, reading: reading))
                     .font(Kerb.voice(.caption2))
                     .foregroundStyle(Kerb.chalkDim)
@@ -184,7 +184,6 @@ struct SpotWidgetView: View {
                     // 1:58:16 shrinks to fit rather than crossing the stroke.
                     VStack(spacing: 0) {
                         CountdownFigure(expiry: reading.expiry, now: entry.date, size: 18)
-                            .frame(width: 58)
                         Text(reading.overrun ? "over" : "left")
                             .kerbLabel(reading.overrun ? Kerb.overdue : Kerb.chalkDim, style: .caption2)
                     }
@@ -262,7 +261,7 @@ struct SpotWidgetView: View {
             if let spot = entry.spot, let reading {
                 Text(headline)
                     .font(.system(size: 13, weight: .black).width(.condensed))
-                CountdownFigure(expiry: reading.expiry, now: entry.date, size: 19)
+                CountdownFigure(expiry: reading.expiry, now: entry.date, size: 19, alignment: .leading)
                     .foregroundStyle(.primary)
                 Text(ParkWording.attribution(spot.limit, at: entry.date, in: SharedContainer.timeZone))
                     .font(.caption2)

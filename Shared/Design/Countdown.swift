@@ -115,13 +115,12 @@ struct CountdownFigure: View {
 
     var size: CGFloat = 34
 
-    /// Whether to hold the widest shape the figure will ever take.
+    /// Where the digits sit inside the box the figure reserves.
     ///
-    /// A count crossing an hour goes from `59:59` to `1:00:00`, and without a
-    /// reserved width everything under it jumps sideways at that moment. Off in
-    /// widgets, where the space is too tight to spend on a digit that is not
-    /// there yet.
-    var reservesWidth: Bool = false
+    /// Centred by default, because the figure's usual home is the bore of a
+    /// ring and it has to stay on the ring's centre whatever it currently
+    /// reads. Leading for the surfaces that set it against a left margin.
+    var alignment: Alignment = .center
 
     /// Scales with the reader's text size. The hero numbers were the one place
     /// in the app still pinned to a fixed point size.
@@ -129,21 +128,42 @@ struct CountdownFigure: View {
 
     private var pointSize: CGFloat { size * scale }
 
+    private var face: Font {
+        .system(size: pointSize, weight: .semibold, design: .rounded)
+    }
+
+    /// The widest shape this particular count can reach before it is next
+    /// redrawn, which is what the figure reserves room for.
+    ///
+    /// The system keeps drawing the count long after the app or the widget
+    /// stopped running, so the string changes width under a view that is not
+    /// being laid out again: `1:00:00` falls to `59:59` and loses a whole
+    /// column. Anything centred on it — the bore of a ring, the word beneath —
+    /// jumps sideways at that moment. Reserving the longest form holds it
+    /// still, and measuring that form from this count rather than assuming the
+    /// worst means a fifteen minute limit is not given room for an hours
+    /// column it will never use.
+    private var widest: String {
+        guard let expiry else { return "0:00" }
+        let remaining = expiry.timeIntervalSince(now)
+        // Past its limit the figure counts upwards, and it has all the time in
+        // the world to reach an hour.
+        return remaining >= 3600 || remaining <= 0 ? "0:00:00" : "00:00"
+    }
+
     var body: some View {
-        figure
-            .font(.system(size: pointSize, weight: .semibold, design: .rounded))
+        // The sizer is the thing being laid out and the count is drawn over
+        // it. A `.background` cannot do this job: a background is given the
+        // size of the content it sits behind and never widens it, so the
+        // reserved width this used to ask for was never actually reserved.
+        Text(widest)
+            .hidden()
+            .overlay(alignment: alignment) { figure }
+            .font(face)
             .monospacedDigit()
             .lineLimit(1)
             .minimumScaleFactor(0.5)
-            .background(alignment: .center) {
-                if reservesWidth {
-                    // Sets the width and is never seen.
-                    Text("0:00:00")
-                        .font(.system(size: pointSize, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .hidden()
-                }
-            }
+            .multilineTextAlignment(alignment == .leading ? .leading : .center)
     }
 
     private var figure: some View {

@@ -122,7 +122,6 @@ private struct LockScreenBanner: View {
                 }
 
                 CountdownFigure(expiry: context.state.expiry, now: .now, size: 16)
-                    .frame(width: 48)
             }
             .frame(width: 68, height: 68)
 

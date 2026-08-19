@@ -156,8 +156,7 @@ struct ParkedView: View {
                         CountdownFigure(
                             expiry: reading?.expiry,
                             now: context.date,
-                            size: 40,
-                            reservesWidth: true
+                            size: 40
                         )
                         Text(caption(for: reading))
                             .kerbLabel(
@@ -286,7 +285,7 @@ struct ParkedView: View {
                 TextField(
                     "",
                     text: $note,
-                    prompt: Text("Add a note — level 3, bay 12")
+                    prompt: Text("Add a note (level 3, bay 12)")
                         .foregroundStyle(Kerb.chalkFaint)
                 )
                 .font(Kerb.voice(.subheadline))
