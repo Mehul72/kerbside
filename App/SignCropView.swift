@@ -21,7 +21,8 @@ struct SignCropView: View {
         NavigationStack {
             VStack(spacing: 12) {
                 Text("Drag a box around one sign")
-                    .kerbLabel()
+                    .font(Kerb.voice(.subheadline))
+                    .foregroundStyle(Kerb.chalk)
 
                 GeometryReader { geometry in
                     ZStack(alignment: .topLeading) {
@@ -58,9 +59,10 @@ struct SignCropView: View {
                 }
 
                 Text(selection == nil ? "No box drawn yet" : "Ready to read the selection")
-                    .kerbLabel(
+                    .kerbCaption(
                         selection == nil ? Kerb.chalkFaint : Kerb.amber,
-                        style: .caption2
+                        style: .footnote,
+                        weight: .medium
                     )
             }
             .padding()

@@ -179,7 +179,7 @@ private struct CompactActionLabel: View {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .medium))
             Text(title)
-                .kerbLabel(Kerb.chalkDim, style: .caption2)
+                .kerbSection(Kerb.chalkDim, style: .caption2)
         }
         .foregroundStyle(Kerb.chalk)
         .frame(maxWidth: .infinity)

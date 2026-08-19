@@ -164,7 +164,7 @@ struct PoleResultView: View {
             VStack(alignment: .leading, spacing: 6) {
                 adaptiveRow {
                     Text("Now in Sydney")
-                        .kerbLabel()
+                        .kerbSection()
                     if !dynamicTypeSize.isAccessibilitySize {
                         Spacer(minLength: 12)
                     }
@@ -181,7 +181,7 @@ struct PoleResultView: View {
                         )
                         .foregroundStyle(Kerb.chalk)
                     Text(Self.day(context.date, in: timeZone))
-                        .kerbLabel(Kerb.chalkDim)
+                        .kerbCaption(Kerb.chalkDim, style: .subheadline)
                     if !dynamicTypeSize.isAccessibilitySize {
                         Spacer(minLength: 0)
                     }
@@ -217,7 +217,7 @@ struct PoleResultView: View {
                 showingOnPhoto ? "Back to pole" : "Show on photo",
                 systemImage: showingOnPhoto ? "arrow.uturn.backward" : "viewfinder"
             )
-            .kerbLabel(Kerb.amber, style: .caption2)
+            .kerbCaption(Kerb.amber, style: .caption, weight: .medium)
             .padding(.horizontal, 11)
             .padding(.vertical, 7)
             .overlay(
@@ -236,7 +236,7 @@ struct PoleResultView: View {
                 .frame(width: 40, height: 1)
 
             Text(tally)
-                .kerbLabel(Kerb.chalkFaint, style: .caption2)
+                .kerbCaption(Kerb.chalkFaint, style: .caption2)
 
             Text("Kerbside reports what each panel says. It does not tell you whether you may park.")
                 .font(Kerb.voice(.footnote))
