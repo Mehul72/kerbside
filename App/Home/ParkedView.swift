@@ -150,13 +150,13 @@ struct ParkedView: View {
                         progress: reading?.progress ?? 0,
                         urgent: reading?.urgent ?? false,
                         overrun: reading?.overrun ?? false,
-                        lineWidth: 11
+                        lineWidth: 13
                     )
                     VStack(spacing: 2) {
                         CountdownFigure(
                             expiry: reading?.expiry,
                             now: context.date,
-                            size: 40
+                            size: 48
                         )
                         Text(caption(for: reading))
                             .kerbLabel(
@@ -165,7 +165,11 @@ struct ParkedView: View {
                             )
                     }
                 }
-                .frame(width: 196, height: 196)
+                // The app has one hero and this is it. At 196 it was merely
+                // the largest thing on the screen; at 244 it is what the
+                // screen is for, and everything under it can afford to be
+                // quieter still.
+                .frame(width: 244, height: 244)
 
                 Text(
                     ParkWording.attribution(

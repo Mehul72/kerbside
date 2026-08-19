@@ -21,12 +21,15 @@ struct EmptyHomeView: View {
     private var restingDial: some View {
         ZStack {
             Circle()
-                .stroke(Kerb.chalkFaint.opacity(0.18), lineWidth: 11)
+                .stroke(Kerb.chalkFaint.opacity(0.18), lineWidth: 13)
             Image(systemName: "car.fill")
-                .font(.system(size: 44, weight: .regular))
+                .font(.system(size: 54, weight: .regular))
                 .foregroundStyle(Kerb.chalkDim)
         }
-        .frame(width: 196, height: 196)
+        // The same diameter the countdown takes once there is one, so the
+        // empty screen is the parked screen with its instrument unlit rather
+        // than a different composition.
+        .frame(width: 244, height: 244)
         .accessibilityHidden(true)
     }
 

@@ -52,7 +52,7 @@ extension View {
 
     func kerbCard(
         _ weight: KerbWeight = .secondary,
-        radius: CGFloat = 14,
+        radius: CGFloat = 18,
         dashed: Bool = false,
         tint: Color? = nil
     ) -> some View {
