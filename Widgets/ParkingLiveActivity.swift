@@ -15,82 +15,162 @@ struct ParkingLiveActivity: Widget {
                 .activityBackgroundTint(Kerb.asphalt)
                 .activitySystemActionForegroundColor(Kerb.amber)
         } dynamicIsland: { context in
-            DynamicIsland {
+            let window = allowanceWindow(context.state)
+            let overrun = hasOverrun(context)
+
+            return DynamicIsland {
+                // Everything lives in the bottom region.
+                //
+                // The regions either side of the camera are far narrower than
+                // they look, and anything substantial put in them overflows
+                // the island's mask — the plate lost its left edge and its
+                // top, the count lost its last digit. The bottom region gets
+                // the island's full span, so the whole reading is composed
+                // there instead.
+                //
+                // Its insets are the system's own. `contentMargins` replaces
+                // them rather than adding to them, so asking for a small
+                // margin pushed the content out past the curve and clipped it
+                // on the left.
+                // Small enough to sit beside the camera without meeting the
+                // mask. Anything with real width belongs below.
                 DynamicIslandExpandedRegion(.leading) {
-                    PlateBadge(
-                        text: context.state.headline,
-                        tone: context.state.ink.tone,
-                        size: 16
-                    )
-                    .padding(.leading, 4)
+                    Image(systemName: "car.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(overrun ? Kerb.overdue : Kerb.amber)
                 }
 
                 DynamicIslandExpandedRegion(.trailing) {
-                    CountdownFigure(
-                        expiry: context.state.expiry,
-                        now: .now,
-                        size: 22
-                    )
-                    .frame(maxWidth: 92)
-                    .padding(.trailing, 4)
+                    if let distance = context.state.distance {
+                        Text(distance)
+                            .font(Kerb.voice(.caption2))
+                            .foregroundStyle(Kerb.chalkDim)
+                            .lineLimit(1)
+                    }
                 }
 
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(context.state.attribution)
-                            .font(Kerb.voice(.caption))
-                            .foregroundStyle(Kerb.chalk)
-                            .lineLimit(2)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .center, spacing: 10) {
+                            PlateBadge(
+                                text: context.state.headline,
+                                tone: context.state.ink.tone,
+                                size: 13
+                            )
 
-                        if let distance = context.state.distance {
-                            // Set in the same voice as the line above rather
-                            // than as a tracked label: letter spacing pushes
-                            // the first glyph past the text view's own bounds,
-                            // and the island clips it against its curve.
-                            Text(distance)
-                                .font(Kerb.voice(.caption2))
-                                .foregroundStyle(Kerb.chalkDim)
+                            Spacer(minLength: 8)
+
+                            CountdownFigure(
+                                expiry: context.state.expiry,
+                                now: .now,
+                                size: 22,
+                                alignment: .trailing
+                            )
+                        }
+
+                        TimeBar(window: window, overrun: overrun)
+
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            // One line. The island caps its own height, and
+                            // a second line pushed this row and the distance
+                            // beside it off the bottom edge entirely.
+                            //
+                            // The leading point of a serif capital overhangs
+                            // its text view, which the island's curve then
+                            // shaves, so the row starts a hair inside.
+                            Text(context.state.attribution)
+                                .font(Kerb.voice(.caption))
+                                .foregroundStyle(Kerb.chalk)
                                 .lineLimit(1)
+                                .minimumScaleFactor(0.85)
+                                .padding(.leading, 2)
+
+                            Spacer(minLength: 0)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 4)
                 }
             } compactLeading: {
                 Image(systemName: "car.fill")
-                    .foregroundStyle(Kerb.amber)
+                    .foregroundStyle(overrun ? Kerb.overdue : Kerb.amber)
             } compactTrailing: {
                 CountdownFigure(expiry: context.state.expiry, now: .now, size: 13)
-                    .frame(maxWidth: 56)
             } minimal: {
                 CountdownFigure(expiry: context.state.expiry, now: .now, size: 11)
-                    .frame(maxWidth: 44)
             }
             .widgetURL(URL(string: "kerbside://spot"))
-            .keylineTint(Kerb.amber)
+            .keylineTint(overrun ? Kerb.overdue : Kerb.amber)
         }
+    }
+}
+
+/// The span the allowance runs across, when there is one.
+///
+/// Shared by the banner and the island so the two cannot disagree about how
+/// much of the allowance is gone.
+private func allowanceWindow(
+    _ state: ParkingActivityAttributes.ContentState
+) -> ClosedRange<Date>? {
+    guard let expiry = state.expiry,
+          let started = state.startedAt,
+          started < expiry
+    else { return nil }
+    return started...expiry
+}
+
+/// Whether the limit has run out. `isStale` is set by ActivityKit at the stale
+/// date the app supplied, which is the expiry, so it is true exactly when the
+/// figure has turned around and started counting up.
+private func hasOverrun(_ context: ActivityViewContext<ParkingActivityAttributes>) -> Bool {
+    guard let expiry = context.state.expiry else { return false }
+    return context.isStale || expiry <= .now
+}
+
+/// The countdown ring, unrolled.
+///
+/// The Dynamic Island is a wide, shallow canvas and a circle spends it badly,
+/// so the allowance is drawn straight across instead. It is the same reading
+/// the ring gives on every other surface, in the shape this one actually has.
+///
+/// Drawn by the system rather than by this view: a Live Activity is rendered
+/// out of process and only redrawn when its state changes, so a bar computed
+/// from `Date.now` would freeze at whatever instant it last rendered while the
+/// figure above it kept ticking. `ProgressView(timerInterval:)` is the one
+/// progress the system animates on its own, so it drains honestly with the app
+/// closed.
+private struct TimeBar: View {
+    let window: ClosedRange<Date>?
+    let overrun: Bool
+
+    var body: some View {
+        Group {
+            if let window, !overrun {
+                ProgressView(timerInterval: window, countsDown: true) {
+                    EmptyView()
+                } currentValueLabel: {
+                    EmptyView()
+                }
+                .progressViewStyle(.linear)
+                .tint(Kerb.amber)
+                .labelsHidden()
+            } else {
+                // Nothing to drain: either no limit was set, or it has passed
+                // and the figure is counting the other way.
+                Capsule()
+                    .fill(overrun ? Kerb.overdue : Kerb.chalkFaint.opacity(0.22))
+                    .frame(height: 4)
+                    .shadow(color: overrun ? Kerb.overdue.opacity(0.5) : .clear, radius: 6)
+            }
+        }
+        .frame(height: 4)
     }
 }
 
 private struct LockScreenBanner: View {
     let context: ActivityViewContext<ParkingActivityAttributes>
 
-    /// The span the allowance runs across, when there is one.
-    private var window: ClosedRange<Date>? {
-        guard let expiry = context.state.expiry,
-              let started = context.state.startedAt,
-              started < expiry
-        else { return nil }
-        return started...expiry
-    }
+    private var window: ClosedRange<Date>? { allowanceWindow(context.state) }
 
-    /// Whether the limit has run out. `isStale` is set by ActivityKit at the
-    /// stale date the app supplied, which is the expiry, so it is true exactly
-    /// when the figure has turned around and started counting up.
-    private var overrun: Bool {
-        guard let expiry = context.state.expiry else { return false }
-        return context.isStale || expiry <= .now
-    }
+    private var overrun: Bool { hasOverrun(context) }
 
     var body: some View {
         HStack(spacing: 14) {
