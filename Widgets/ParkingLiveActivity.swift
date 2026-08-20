@@ -28,16 +28,25 @@ struct ParkingLiveActivity: Widget {
                 // the island's full span, so the whole reading is composed
                 // there instead.
                 //
-                // Its insets are the system's own. `contentMargins` replaces
-                // them rather than adding to them, so asking for a small
-                // margin pushed the content out past the curve and clipped it
-                // on the left.
+                // Every inset here is padding inside the content, never
+                // `contentMargins`. That modifier replaces the system's own
+                // margins instead of adding to them, so asking for a small one
+                // moves content outwards — which is how the sentence lost its
+                // first letter the first time round. Padding is additive, so
+                // it can only ever pull content further from the curve.
+                //
+                // Insetting matters more here than the flat corner radius
+                // suggests: the pill's ends are round, so the width actually
+                // available shrinks towards the top and bottom of the island,
+                // exactly where these rows sit.
+
                 // Small enough to sit beside the camera without meeting the
                 // mask. Anything with real width belongs below.
                 DynamicIslandExpandedRegion(.leading) {
                     Image(systemName: "car.fill")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(overrun ? Kerb.overdue : Kerb.amber)
+                        .padding(.leading, 6)
                 }
 
                 DynamicIslandExpandedRegion(.trailing) {
@@ -46,6 +55,7 @@ struct ParkingLiveActivity: Widget {
                             .font(Kerb.voice(.caption2))
                             .foregroundStyle(Kerb.chalkDim)
                             .lineLimit(1)
+                            .padding(.trailing, 6)
                     }
                 }
 
@@ -72,22 +82,18 @@ struct ParkingLiveActivity: Widget {
 
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             // One line. The island caps its own height, and
-                            // a second line pushed this row and the distance
-                            // beside it off the bottom edge entirely.
-                            //
-                            // The leading point of a serif capital overhangs
-                            // its text view, which the island's curve then
-                            // shaves, so the row starts a hair inside.
+                            // a second line pushed this row off the bottom
+                            // edge entirely.
                             Text(context.state.attribution)
                                 .font(Kerb.voice(.caption))
                                 .foregroundStyle(Kerb.chalk)
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.85)
-                                .padding(.leading, 2)
+                                .minimumScaleFactor(0.8)
 
                             Spacer(minLength: 0)
                         }
                     }
+                    .padding(.horizontal, 10)
                 }
             } compactLeading: {
                 Image(systemName: "car.fill")
