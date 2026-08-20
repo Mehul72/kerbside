@@ -224,3 +224,80 @@ struct TimeToLeaveTests {
         #expect(words.body.contains("3:00 pm"))
     }
 }
+
+/// The opt-in alarm, for somebody inside a shop who will not see a banner.
+struct ExpiryAlarmTests {
+
+    static let parked = Clock.sydney(2026, 8, 19, 13)
+    static let expiry = Clock.sydney(2026, 8, 19, 15)
+
+    // One spot, not a fresh one per call: a reminder's identity is built from
+    // the spot's, so a computed fixture would mint a new UUID each time and
+    // make a stable plan look unstable.
+    static let spot = ParkingSpot(
+        parkedAt: parked,
+        limit: .expires(at: expiry, source: .chosen(minutes: 120))
+    )
+
+    static func plan(alarm: Bool) -> [Reminder] {
+        ReminderPlan.reminders(
+            for: spot,
+            now: parked,
+            in: Clock.sydney,
+            preferences: .standard.alarming(alarm)
+        )
+    }
+
+    @Test("off by default, and off means one quiet notice")
+    func offByDefault() throws {
+        #expect(!ReminderPreferences.standard.alarmAtExpiry)
+
+        let ended = Self.plan(alarm: false).filter { $0.kind == .limitEnded }
+        #expect(ended.count == 1)
+        #expect(ended[0].isAlarm == false)
+        #expect(ended[0].at == Self.expiry)
+    }
+
+    @Test("on, it sounds a series rather than once")
+    func repeatsWhenAsked() throws {
+        let ended = Self.plan(alarm: true).filter { $0.kind == .limitEnded }
+
+        #expect(ended.count == ReminderPreferences.standard.alarmRepeats)
+        #expect(ended.allSatisfy { $0.isAlarm })
+        // The first lands exactly on the limit; the rest follow it.
+        #expect(ended[0].at == Self.expiry)
+        #expect(ended[1].at == Self.expiry.addingTimeInterval(20))
+        #expect(ended[3].at == Self.expiry.addingTimeInterval(60))
+    }
+
+    @Test("every repeat has its own identity, so none replaces another")
+    func distinctIdentities() {
+        let ended = Self.plan(alarm: true).filter { $0.kind == .limitEnded }
+        #expect(Set(ended.map(\.id)).count == ended.count)
+    }
+
+    @Test("replanning replaces the series rather than stacking a second one")
+    func stableAcrossReplanning() {
+        #expect(Self.plan(alarm: true).map(\.id) == Self.plan(alarm: true).map(\.id))
+    }
+
+    @Test("an alarm never turns the other reminders into alarms")
+    func onlyTheExpirySounds() {
+        let others = Self.plan(alarm: true).filter { $0.kind != .limitEnded }
+        #expect(!others.isEmpty)
+        #expect(others.allSatisfy { $0.isAlarm == false })
+    }
+
+    @Test("a collected car sounds nothing, however the alarm is set")
+    func collectedIsSilent() {
+        var spot = Self.spot
+        spot.collectedAt = Clock.sydney(2026, 8, 19, 14)
+        let reminders = ReminderPlan.reminders(
+            for: spot,
+            now: Self.parked,
+            in: Clock.sydney,
+            preferences: .standard.alarming(true)
+        )
+        #expect(reminders.isEmpty)
+    }
+}

@@ -30,6 +30,11 @@ targets:
     sources:
       - path: App
       - path: Shared
+      # The alarm sound has to sit in the app bundle for
+      # `UNNotificationSound(named:)` to find it, so it is copied rather than
+      # compiled and keeps no folder of its own inside the bundle.
+      - path: App/Resources/kerbside-alarm.caf
+        buildPhase: resources
     dependencies:
       - package: SignKit
       - package: SignVision

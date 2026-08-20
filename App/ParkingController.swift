@@ -28,6 +28,16 @@ final class ParkingController: ObservableObject {
     /// the interface restates what is active without polling.
     @Published private(set) var instant = Date()
 
+    /// Whether a limit running out should sound an alarm rather than a single
+    /// chime. Off unless asked for, and remembered between launches.
+    @Published var alarmOnExpiry: Bool = ParkingController.storedAlarmPreference {
+        didSet {
+            guard alarmOnExpiry != oldValue else { return }
+            Self.store(alarm: alarmOnExpiry)
+            rescheduleReminders()
+        }
+    }
+
     let location = LocationService()
 
     private let reminders = ReminderService()
@@ -48,6 +58,38 @@ final class ParkingController: ObservableObject {
     /// "No limit recorded".
     private var activityPushes: Task<Void, Never>?
     private var locationChanges: AnyCancellable?
+
+    private static let alarmKey = "au.kerbside.alarmOnExpiry"
+
+    private static var storedAlarmPreference: Bool {
+        (UserDefaults(suiteName: SharedContainer.appGroup) ?? .standard).bool(forKey: alarmKey)
+    }
+
+    private static func store(alarm: Bool) {
+        (UserDefaults(suiteName: SharedContainer.appGroup) ?? .standard)
+            .set(alarm, forKey: alarmKey)
+    }
+
+    /// What the reminder plan is built from right now.
+    private var reminderPreferences: ReminderPreferences {
+        .standard.alarming(alarmOnExpiry)
+    }
+
+    /// Rewrites the schedule for the car currently parked, if there is one.
+    private func rescheduleReminders() {
+        guard let spot = record.active else { return }
+        let walk = walkingMinutes
+        let preferences = reminderPreferences
+        Task {
+            await reminders.reschedule(
+                for: spot,
+                now: Date(),
+                in: timeZone,
+                walkingMinutes: walk,
+                preferences: preferences
+            )
+        }
+    }
 
     var spot: ParkingSpot? { record.active }
     var isParked: Bool { record.active != nil }
@@ -276,7 +318,8 @@ final class ParkingController: ObservableObject {
                 for: spot,
                 now: Date(),
                 in: timeZone,
-                walkingMinutes: walkingMinutes
+                walkingMinutes: walkingMinutes,
+                preferences: reminderPreferences
             )
         }
         return granted
@@ -299,7 +342,8 @@ final class ParkingController: ObservableObject {
             for: spot,
             now: Date(),
             in: timeZone,
-            walkingMinutes: walk
+            walkingMinutes: walk,
+            preferences: reminderPreferences
         )
     }
 
@@ -367,12 +411,14 @@ final class ParkingController: ObservableObject {
             // spot and the reason it exists, so adding one replaces the one it
             // supersedes and racing reschedules cannot stack up the way two
             // banners can.
+            let preferences = reminderPreferences
             Task {
                 await reminders.reschedule(
                     for: spot,
                     now: now,
                     in: timeZone,
-                    walkingMinutes: walk
+                    walkingMinutes: walk,
+                    preferences: preferences
                 )
             }
         } else {

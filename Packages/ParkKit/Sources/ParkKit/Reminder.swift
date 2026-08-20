@@ -32,10 +32,20 @@ public struct Reminder: Hashable, Sendable, Identifiable {
     public var at: Date
     public var kind: ReminderKind
 
-    public init(id: String, at: Date, kind: ReminderKind) {
+    /// Whether this one should sound like an alarm rather than a notification.
+    ///
+    /// iOS will not let an ordinary app override the silent switch — that needs
+    /// the critical-alert entitlement, which Apple grants to medical and safety
+    /// apps and would not grant to this one. So an alarm here is a longer,
+    /// harsher sound repeated a few times, which is what can actually be done
+    /// and is enough to be noticed from inside a shop.
+    public var isAlarm: Bool
+
+    public init(id: String, at: Date, kind: ReminderKind, isAlarm: Bool = false) {
         self.id = id
         self.at = at
         self.kind = kind
+        self.isAlarm = isAlarm
     }
 }
 
@@ -55,16 +65,38 @@ public struct ReminderPreferences: Hashable, Sendable, Codable {
     /// at the exact moment somebody would have to start running.
     public var walkingBuffer: Int
 
+    /// Sound an alarm when the limit runs out, rather than one chime.
+    ///
+    /// Off unless somebody asks for it. A single notification is the right
+    /// weight for most people most of the time, and an app that decides on its
+    /// own to make an alarm noise in a quiet shop is an app people delete.
+    public var alarmAtExpiry: Bool
+
+    /// How many times the alarm sounds, and how far apart.
+    ///
+    /// A notification plays its sound once, so being hard to miss has to come
+    /// from repetition rather than from length. Four over a minute is enough to
+    /// catch somebody at a till without becoming a nuisance if they are already
+    /// walking back.
+    public var alarmRepeats: Int
+    public var alarmInterval: TimeInterval
+
     public init(
         leads: [Int],
         atExpiry: Bool,
         restrictionChanges: Bool,
-        walkingBuffer: Int = 5
+        walkingBuffer: Int = 5,
+        alarmAtExpiry: Bool = false,
+        alarmRepeats: Int = 4,
+        alarmInterval: TimeInterval = 20
     ) {
         self.leads = leads
         self.atExpiry = atExpiry
         self.restrictionChanges = restrictionChanges
         self.walkingBuffer = walkingBuffer
+        self.alarmAtExpiry = alarmAtExpiry
+        self.alarmRepeats = alarmRepeats
+        self.alarmInterval = alarmInterval
     }
 
     public static let standard = ReminderPreferences(
@@ -72,6 +104,13 @@ public struct ReminderPreferences: Hashable, Sendable, Codable {
         atExpiry: true,
         restrictionChanges: true
     )
+
+    /// The same preferences with the alarm turned on or off.
+    public func alarming(_ on: Bool) -> ReminderPreferences {
+        var copy = self
+        copy.alarmAtExpiry = on
+        return copy
+    }
 }
 
 /// Works out which reminders are worth scheduling for a spot.
@@ -132,9 +171,24 @@ public enum ReminderPlan {
         // The moment it runs out is worth saying however the warning was
         // worked out, so this sits outside both branches above.
         if let expiry = spot.limit.expiry, preferences.atExpiry, expiry > now {
-            reminders.append(
-                Reminder(id: "\(spot.id.uuidString).ended", at: expiry, kind: .limitEnded)
-            )
+            // One notice normally; a short series when an alarm was asked for,
+            // because a notification sounds once and somebody inside a shop
+            // will miss one.
+            let times = preferences.alarmAtExpiry ? max(1, preferences.alarmRepeats) : 1
+
+            for attempt in 0..<times {
+                let at = expiry.addingTimeInterval(Double(attempt) * preferences.alarmInterval)
+                reminders.append(
+                    Reminder(
+                        id: attempt == 0
+                            ? "\(spot.id.uuidString).ended"
+                            : "\(spot.id.uuidString).ended.\(attempt)",
+                        at: at,
+                        kind: .limitEnded,
+                        isAlarm: preferences.alarmAtExpiry
+                    )
+                )
+            }
         }
 
         if preferences.restrictionChanges,

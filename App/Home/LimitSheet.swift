@@ -58,6 +58,10 @@ struct LimitSheet: View {
                     }
 
                     if controller.spot?.limit.expiry != nil {
+                        section("When it runs out") { alarmRow }
+                    }
+
+                    if controller.spot?.limit.expiry != nil {
                         // Undoing a choice, not making one. It was set as a
                         // full-width outlined button, which made the least
                         // wanted control in the sheet the most prominent.
@@ -99,6 +103,34 @@ struct LimitSheet: View {
         let hours = minutes / 60
         let rest = minutes % 60
         return rest == 0 ? "\(hours) hr" : "\(hours) hr \(rest)"
+    }
+
+    /// The alarm, offered where it belongs: beside the limit it will sound for.
+    ///
+    /// Off unless asked for. The note underneath is not a disclaimer for its own
+    /// sake — an alarm somebody believes will reach them through silent mode is
+    /// worse than no alarm, and iOS gives an ordinary app no way to do that.
+    private var alarmRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: $controller.alarmOnExpiry) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Sound an alarm")
+                        .kerbCaption(Kerb.chalk, style: .subheadline, weight: .semibold)
+                    Text("Repeats for a minute, for when the phone is in a pocket.")
+                        .kerbCaption(style: .footnote)
+                }
+            }
+            .tint(Kerb.amber)
+            .padding(15)
+            .kerbCard(
+                controller.alarmOnExpiry ? .primary : .secondary,
+                tint: controller.alarmOnExpiry ? Kerb.amber : nil
+            )
+            .accessibilityIdentifier("alarm")
+
+            Text("It cannot sound while the phone is on silent.")
+                .kerbCaption(Kerb.chalkFaint, style: .caption)
+        }
     }
 
     private func isSelected(_ candidate: LimitCandidate) -> Bool {

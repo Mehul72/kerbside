@@ -29,11 +29,23 @@ final class ReminderService {
     /// Rescheduling is always a replacement, never an addition: a reminder's
     /// identity comes from the spot and the reason, so changing a limit
     /// rewrites the reminders rather than leaving the old ones to fire.
+    /// The alarm's own sound, bundled with the app.
+    ///
+    /// Longer and harsher than the default chime, because the point of it is to
+    /// be heard from inside a shop. It cannot be louder than the phone is set
+    /// to, and it cannot sound at all on silent: overriding either needs the
+    /// critical-alert entitlement, which Apple reserves for medical and safety
+    /// apps. Repetition is what is left, and repetition is what the plan does.
+    static let alarmSound = UNNotificationSound(
+        named: UNNotificationSoundName("kerbside-alarm.caf")
+    )
+
     func reschedule(
         for spot: ParkingSpot,
         now: Date,
         in timeZone: TimeZone,
-        walkingMinutes: Int? = nil
+        walkingMinutes: Int? = nil,
+        preferences: ReminderPreferences = .standard
     ) async {
         await clear()
 
@@ -41,7 +53,8 @@ final class ReminderService {
             for: spot,
             now: now,
             in: timeZone,
-            walkingMinutes: walkingMinutes
+            walkingMinutes: walkingMinutes,
+            preferences: preferences
         )
         guard !reminders.isEmpty else { return }
         guard await authorisationStatus() == .authorized else { return }
@@ -51,7 +64,7 @@ final class ReminderService {
             let content = UNMutableNotificationContent()
             content.title = wording.title
             content.body = wording.body
-            content.sound = .default
+            content.sound = reminder.isAlarm ? Self.alarmSound : .default
             content.interruptionLevel = .timeSensitive
 
             let request = UNNotificationRequest(
