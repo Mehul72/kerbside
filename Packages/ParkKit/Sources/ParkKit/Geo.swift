@@ -48,6 +48,37 @@ public enum Geo {
         return names[index]
     }
 
+    /// Where the car is relative to the way somebody is facing.
+    ///
+    /// `compassPoint` answers a different question: it says where the car is on
+    /// the earth, which does not change as a phone is turned. That is the right
+    /// answer to "which way is the car" and the wrong one to put next to a
+    /// needle that swings, because a reader turning on the spot watches the
+    /// arrow move while the words hold still and concludes the words are stuck.
+    ///
+    /// - Parameters:
+    ///   - bearing: degrees clockwise from north, from here to the car.
+    ///   - heading: degrees clockwise from north that the device is facing.
+    public static func relativeDirection(bearing: Double, heading: Double) -> String {
+        let turn = signedTurn(from: heading, to: bearing)
+        let side = turn >= 0 ? "right" : "left"
+
+        return switch abs(turn) {
+        case ..<18: "straight ahead"
+        case ..<65: "slightly to your \(side)"
+        case ..<118: "to your \(side)"
+        case ..<162: "behind you, to the \(side)"
+        default: "behind you"
+        }
+    }
+
+    /// How far to turn, in `-180...180`. Negative is anticlockwise.
+    static func signedTurn(from heading: Double, to bearing: Double) -> Double {
+        let delta = (bearing - heading).truncatingRemainder(dividingBy: 360)
+        let positive = (delta + 360).truncatingRemainder(dividingBy: 360)
+        return positive > 180 ? positive - 360 : positive
+    }
+
     /// Distance said the way it would be said out loud. Precision falls away
     /// with range because "1,247 m" pretends to a certainty a phone in a
     /// pocket does not have.

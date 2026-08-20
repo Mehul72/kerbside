@@ -145,6 +145,12 @@ public enum ParkWording {
         }
     }
 
+    /// The walk, with the number agreeing with its noun. "About 1 minutes on
+    /// foot" is the kind of thing that makes an interface look unfinished.
+    public static func walk(minutes: Int) -> String {
+        minutes == 1 ? "About a minute on foot." : "About \(minutes) minutes on foot."
+    }
+
     // MARK: - Place
 
     /// How far the car is, and which way. Says when a fix was too loose to

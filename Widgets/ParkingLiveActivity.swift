@@ -178,6 +178,19 @@ private struct TimeBar: View {
 private struct LockScreenBanner: View {
     let context: ActivityViewContext<ParkingActivityAttributes>
 
+    /// The ring, and what will fit inside it.
+    ///
+    /// The figure reserves room for the longest shape its count can reach, and
+    /// `1:58:38` is far wider than `14:09`. Sized by eye against the short form
+    /// it ran straight over the stroke on any limit of an hour or more, so the
+    /// bore is worked out here and the digits are held inside it with clearance
+    /// on both sides rather than trusted to be small enough.
+    private let ring: CGFloat = 78
+    private let stroke: CGFloat = 6
+    private let clearance: CGFloat = 4
+
+    private var bore: CGFloat { ring - stroke * 2 - clearance * 2 }
+
     private var window: ClosedRange<Date>? { allowanceWindow(context.state) }
 
     private var overrun: Bool { hasOverrun(context) }
@@ -206,14 +219,15 @@ private struct LockScreenBanner: View {
                     Circle()
                         .stroke(
                             overrun ? Kerb.overdue : Kerb.chalkFaint.opacity(0.25),
-                            lineWidth: 6
+                            lineWidth: stroke
                         )
                         .shadow(color: overrun ? Kerb.overdue.opacity(0.6) : .clear, radius: 10)
                 }
 
-                CountdownFigure(expiry: context.state.expiry, now: .now, size: 16)
+                CountdownFigure(expiry: context.state.expiry, now: .now, size: 14)
+                    .frame(width: bore)
             }
-            .frame(width: 68, height: 68)
+            .frame(width: ring, height: ring)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {

@@ -31,6 +31,10 @@ final class LocationService: NSObject, ObservableObject {
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
+        // A degree of turn is finer than the words on screen can express, and
+        // every update republishes the whole screen. Two keeps the needle
+        // smooth without redrawing for movement nobody asked about.
+        manager.headingFilter = 2
         authorization = manager.authorizationStatus
     }
 

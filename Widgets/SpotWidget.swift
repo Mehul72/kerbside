@@ -108,6 +108,11 @@ struct SpotWidget: Widget {
 }
 
 struct SpotWidgetView: View {
+    /// The ring in the medium size, and the stroke it is drawn with, so the
+    /// bore the digits have to fit inside is worked out rather than guessed.
+    static let ring: CGFloat = 82
+    static let stroke: CGFloat = 7
+
     let entry: SpotEntry
     @Environment(\.widgetFamily) private var family
 
@@ -189,17 +194,21 @@ struct SpotWidgetView: View {
                         progress: reading.progress,
                         urgent: reading.urgent,
                         overrun: reading.overrun,
-                        lineWidth: 7
+                        lineWidth: Self.stroke
                     )
-                    // Held inside the ring's bore. A long figure such as
-                    // 1:58:16 shrinks to fit rather than crossing the stroke.
+                    // Held inside the ring's bore, with clearance, rather than
+                    // trusted to be small enough. The figure reserves room for
+                    // the longest shape its count can reach, and `1:58:16` is
+                    // far wider than `14:09`: sized against the short form it
+                    // ran over the stroke on any limit of an hour or more.
                     VStack(spacing: 0) {
-                        CountdownFigure(expiry: reading.expiry, now: entry.date, size: 18)
+                        CountdownFigure(expiry: reading.expiry, now: entry.date, size: 16)
                         Text(reading.overrun ? "over" : "left")
                             .kerbLabel(reading.overrun ? Kerb.overdue : Kerb.chalkDim, style: .caption2)
                     }
+                    .frame(width: Self.ring - Self.stroke * 2 - 8)
                 }
-                .frame(width: 82, height: 82)
+                .frame(width: Self.ring, height: Self.ring)
 
                 VStack(alignment: .leading, spacing: 8) {
                     mark(size: 15)

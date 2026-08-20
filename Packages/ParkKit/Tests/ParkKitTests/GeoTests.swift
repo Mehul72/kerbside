@@ -96,3 +96,44 @@ struct GeoTests {
         #expect(!Coordinate(latitude: 0, longitude: 0, accuracy: -1).isPrecise)
     }
 }
+
+/// Where the car is relative to the way somebody is facing, which is what a
+/// swinging needle needs words for.
+struct RelativeDirectionTests {
+
+    @Test("facing the car reads as straight ahead")
+    func ahead() {
+        #expect(Geo.relativeDirection(bearing: 90, heading: 90) == "straight ahead")
+        #expect(Geo.relativeDirection(bearing: 100, heading: 90) == "straight ahead")
+        #expect(Geo.relativeDirection(bearing: 80, heading: 90) == "straight ahead")
+    }
+
+    @Test("turning the phone changes the words, which is the whole point")
+    func turningChangesIt() {
+        let bearing = 315.0  // the car is north-west of here
+        // Facing north-west: ahead. Facing north: it is off to the left.
+        #expect(Geo.relativeDirection(bearing: bearing, heading: 315) == "straight ahead")
+        #expect(Geo.relativeDirection(bearing: bearing, heading: 0) == "slightly to your left")
+        #expect(Geo.relativeDirection(bearing: bearing, heading: 45) == "to your left")
+        #expect(Geo.relativeDirection(bearing: bearing, heading: 135) == "behind you")
+    }
+
+    @Test("left and right are not mixed up")
+    func sides() {
+        #expect(Geo.relativeDirection(bearing: 90, heading: 0) == "to your right")
+        #expect(Geo.relativeDirection(bearing: 270, heading: 0) == "to your left")
+    }
+
+    @Test("the turn wraps the short way round")
+    func wrapsShortWay() {
+        // From 350 degrees to 10 is twenty degrees clockwise, not 340 back.
+        #expect(abs(Geo.signedTurn(from: 350, to: 10) - 20) < 0.001)
+        #expect(abs(Geo.signedTurn(from: 10, to: 350) + 20) < 0.001)
+    }
+
+    @Test("a walk agrees with its noun")
+    func walkGrammar() {
+        #expect(ParkWording.walk(minutes: 1) == "About a minute on foot.")
+        #expect(ParkWording.walk(minutes: 9) == "About 9 minutes on foot.")
+    }
+}

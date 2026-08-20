@@ -97,12 +97,15 @@ struct ReturnView: View {
                     .considerate(Kerb.Motion.track, value: Int(metres))
 
                 if let bearing = controller.bearing {
-                    // This screen's one loud reading.
-                    Text(Geo.compassPoint(bearing))
+                    // This screen's one loud reading, and it turns with the
+                    // needle. Naming the compass point instead held the words
+                    // still while the arrow swung, which reads as a stuck label
+                    // rather than as a correct answer to a different question.
+                    Text(heading(for: bearing))
                         .kerbLabel(Kerb.amber, style: .subheadline)
                 }
 
-                Text("About \(Geo.walkingMinutes(metres: metres)) minutes on foot.")
+                Text(ParkWording.walk(minutes: Geo.walkingMinutes(metres: metres)))
                     .kerbCaption(style: .footnote)
             } else {
                 Text("Finding you")
@@ -119,6 +122,19 @@ struct ReturnView: View {
                 .frame(maxWidth: 280)
             }
         }
+    }
+
+    /// Where the car is relative to the way the phone is facing, when it can
+    /// tell, and relative to north when it cannot.
+    ///
+    /// `compassPoint` answers a fair question — where the car is on the earth —
+    /// but it cannot change as somebody turns on the spot, so beside a needle
+    /// that swings it reads as a label that has stuck.
+    private func heading(for bearing: Double) -> String {
+        guard controller.location.hasCompass, let facing = controller.location.heading else {
+            return Geo.compassPoint(bearing)
+        }
+        return Geo.relativeDirection(bearing: bearing, heading: facing)
     }
 
     /// What the last twenty metres need, which a bearing cannot give: a
