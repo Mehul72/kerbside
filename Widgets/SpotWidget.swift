@@ -146,13 +146,24 @@ struct SpotWidgetView: View {
         return PlateTone(panel.restriction)
     }
 
+    /// The plate the car is under, or — when no sign was read, so there is no
+    /// plate to show — Kerbside's own mark for a car it is holding time on.
+    @ViewBuilder
+    private func mark(size: CGFloat) -> some View {
+        if governing == nil {
+            ParkedMark(overrun: reading?.overrun ?? false, size: size - 1)
+        } else {
+            PlateBadge(text: headline, tone: tone, size: size)
+        }
+    }
+
     // MARK: - Home Screen
 
     private var small: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let spot = entry.spot, let reading {
                 HStack {
-                    PlateBadge(text: headline, tone: tone, size: 15)
+                    mark(size: 14)
                     Spacer(minLength: 0)
                 }
 
@@ -191,7 +202,7 @@ struct SpotWidgetView: View {
                 .frame(width: 82, height: 82)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    PlateBadge(text: headline, tone: tone, size: 17)
+                    mark(size: 15)
                     Text(ParkWording.attribution(spot.limit, at: entry.date, in: SharedContainer.timeZone))
                         .font(Kerb.voice(.caption))
                         .foregroundStyle(Kerb.chalk)

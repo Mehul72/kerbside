@@ -46,6 +46,35 @@ final class IslandTests: XCTestCase {
         capture("island-expanded")
     }
 
+    /// The same island once the limit has passed.
+    ///
+    /// Needs a spot whose limit already expired seeded into the shared
+    /// container first — the app cannot be made to wait out a limit, and the
+    /// overrun colouring is the one state a screenshot of a fresh park never
+    /// reaches. Skipped rather than failed when nothing was seeded, because
+    /// this is a generator for the eye, not an assertion.
+    func testOverrunIsland() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        guard app.buttons["collect"].waitForExistence(timeout: 15) else {
+            throw XCTSkip("no expired spot seeded; run the overrun seeder first")
+        }
+        // The banner is pushed off the back of the first fix, so give the
+        // parked screen time to ask for one before leaving.
+        Thread.sleep(forTimeInterval: 5)
+        let allow = springboard.buttons["Allow"]
+        if allow.waitForExistence(timeout: 4) { allow.tap() }
+
+        XCUIDevice.shared.press(.home)
+        Thread.sleep(forTimeInterval: 4)
+
+        let island = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.021))
+        island.press(forDuration: 1.2)
+        Thread.sleep(forTimeInterval: 2)
+        capture("island-overrun")
+    }
+
     private func capture(_ name: String) {
         let shot = XCUIScreen.main.screenshot()
         let attachment = XCTAttachment(screenshot: shot)

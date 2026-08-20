@@ -62,11 +62,15 @@ struct ParkingLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(alignment: .center, spacing: 10) {
-                            PlateBadge(
-                                text: context.state.headline,
-                                tone: context.state.ink.tone,
-                                size: 13
-                            )
+                            if context.state.ink == .grey {
+                                ParkedMark(overrun: overrun, size: 12)
+                            } else {
+                                PlateBadge(
+                                    text: context.state.headline,
+                                    tone: context.state.ink.tone,
+                                    size: 13
+                                )
+                            }
 
                             Spacer(minLength: 8)
 
@@ -213,11 +217,15 @@ private struct LockScreenBanner: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    PlateBadge(
-                        text: context.state.headline,
-                        tone: context.state.ink.tone,
-                        size: 14
-                    )
+                    if context.state.ink == .grey {
+                        ParkedMark(overrun: overrun, size: 12)
+                    } else {
+                        PlateBadge(
+                            text: context.state.headline,
+                            tone: context.state.ink.tone,
+                            size: 14
+                        )
+                    }
                     Spacer(minLength: 0)
                     if let distance = context.state.distance {
                         Text(distance)

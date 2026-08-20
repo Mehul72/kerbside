@@ -216,6 +216,41 @@ struct PlateBadge: View {
     }
 }
 
+/// What Kerbside calls the car when no sign was read.
+///
+/// Not a plate. A plate carries words that were on a sign, painted in the
+/// colours the street paints them, and "PARKED" was never on a sign. It was
+/// being drawn as a plate in `unread` grey, which says something different
+/// again — that a panel is there and could not be read — so one grey chip was
+/// standing for three unrelated facts at once. When there is no sign there is
+/// now no plate, and this is the app's own mark in the app's own colours.
+///
+/// It is also the one mark here that changes colour when a limit passes.
+/// `overdue` is deliberately not the plate's red: a plate's red is a
+/// prohibition the street is making, and this only reports that a limit
+/// somebody set has been passed, which is a fact about a clock.
+struct ParkedMark: View {
+    var overrun: Bool = false
+    var size: CGFloat = 13
+
+    private var ink: Color { overrun ? Kerb.overdue : Kerb.chalk }
+
+    var body: some View {
+        Text(overrun ? "Over" : "Parked")
+            .font(.system(size: size, weight: .semibold).width(.expanded))
+            .tracking(1.2)
+            .textCase(.uppercase)
+            .foregroundStyle(ink)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .padding(.horizontal, size * 0.52)
+            .padding(.vertical, size * 0.3)
+            .background(ink.opacity(overrun ? 0.16 : 0.10), in: Capsule())
+            .overlay(Capsule().strokeBorder(ink.opacity(overrun ? 0.6 : 0.32), lineWidth: 1))
+            .accessibilityLabel(overrun ? "Over the limit" : "Parked")
+    }
+}
+
 // MARK: - Reading a limit for display
 
 /// What a countdown needs to draw itself, worked out in one place so the app,

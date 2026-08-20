@@ -50,7 +50,13 @@ struct LiveActivityService: Sendable {
         // The expiry is the one moment the banner must redraw itself: the
         // figure has to turn around and start counting up. Marking the content
         // stale then is what wakes it, because the app will not be running.
-        let content = ActivityContent(state: state, staleDate: state.expiry)
+        //
+        // Only while it is still ahead of us. A limit that has already passed
+        // — a car left overnight, the app reopened the morning after — has
+        // nothing left to wake for, and handing ActivityKit a stale date in
+        // the past means it never shows the banner at all.
+        let staleDate = state.expiry.flatMap { $0 > now ? $0 : nil }
+        let content = ActivityContent(state: state, staleDate: staleDate)
 
         // Updating in place rather than restarting, so the Lock Screen does
         // not flash every time a distance changes.
