@@ -4,3 +4,17 @@ theme: minima
 url: https://mehul72.github.io
 baseurl: /kerbside
 author: Mehul Fursule
+
+# Keep the public site limited to customer-facing pages. Store assets and
+# internal product documents remain in the repository but are never published
+# or added to the site navigation.
+header_pages:
+  - store/privacy-policy.md
+  - store/support.md
+
+exclude:
+  - store/ExportOptions.plist
+  - store/UploadOptions.plist
+  - store/capture-screenshots.sh
+  - store/listing.md
+  - store/screenshots
