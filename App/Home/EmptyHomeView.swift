@@ -14,7 +14,23 @@ struct EmptyHomeView: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 0) {
-                    KerbsideMark().entering(0)
+                    ZStack {
+                        KerbsideMark()
+                        HStack {
+                            Spacer()
+                            Button { route = .about } label: {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(Kerb.chalkDim)
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("About Kerbside NSW")
+                            .accessibilityIdentifier("about")
+                        }
+                    }
+                    .entering(0)
 
                     Spacer(minLength: 20).frame(maxHeight: 44)
 

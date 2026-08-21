@@ -19,6 +19,7 @@ struct HomeView: View {
         case reader
         case walkBack
         case past
+        case about
         var id: Self { self }
     }
 
@@ -51,6 +52,8 @@ struct HomeView: View {
                 ReturnView(controller: controller)
             case .past:
                 PastSpotsView(controller: controller)
+            case .about:
+                AboutView()
             }
         }
         .alert(

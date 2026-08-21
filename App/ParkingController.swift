@@ -99,6 +99,7 @@ final class ParkingController: ObservableObject {
         // so it needs a way to start from nothing. Nothing else passes this.
         if ProcessInfo.processInfo.arguments.contains("-kerbside-reset") {
             try? store.save(.empty)
+            Self.store(alarm: false)
             FirstRunView.markSeen()
         }
 

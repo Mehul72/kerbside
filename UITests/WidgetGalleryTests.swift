@@ -70,7 +70,7 @@ final class WidgetGalleryTests: XCTestCase {
             Thread.sleep(forTimeInterval: 2)
         }
 
-        let cell = springboard.staticTexts["Kerbside"].firstMatch
+        let cell = springboard.staticTexts["Kerbside NSW"].firstMatch
         guard cell.waitForExistence(timeout: 5) else {
             capture("widget-gallery-no-kerbside")
             throw XCTSkip("Kerbside did not appear in the widget gallery")

@@ -63,6 +63,26 @@ struct InvariantTests {
         }
     }
 
+    @Test("UserDefaults access has the App Store privacy reasons it needs")
+    func userDefaultsReasonsAreDeclared() throws {
+        let manifest = Fixtures.repositoryRoot
+            .appendingPathComponent("App/PrivacyInfo.xcprivacy")
+        let data = try Data(contentsOf: manifest)
+        let propertyList = try PropertyListSerialization.propertyList(from: data, format: nil)
+        let root = try #require(propertyList as? [String: Any])
+        let APIs = try #require(root["NSPrivacyAccessedAPITypes"] as? [[String: Any]])
+        let defaults = try #require(APIs.first {
+            $0["NSPrivacyAccessedAPIType"] as? String
+                == "NSPrivacyAccessedAPICategoryUserDefaults"
+        })
+        let reasons = Set(try #require(defaults["NSPrivacyAccessedAPITypeReasons"] as? [String]))
+
+        #expect(reasons.contains("1C8F.1"), "the App Group preference needs its approved reason")
+        #expect(reasons.contains("CA92.1"), "the local fallback needs its approved reason")
+        #expect(root["NSPrivacyTracking"] as? Bool == false)
+        #expect((root["NSPrivacyCollectedDataTypes"] as? [Any])?.isEmpty == true)
+    }
+
     @Test("the reasoning never reads an ambient clock")
     func noAmbientClock() {
         for source in Self.swiftSources()

@@ -1,5 +1,5 @@
 import ParkKit
-import PhotosUI
+@preconcurrency import PhotosUI
 import SignKit
 import SwiftUI
 import UIKit
@@ -124,6 +124,16 @@ struct ParkedView: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("past")
             }
+            Button { route = .about } label: {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(Kerb.chalkDim)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("About Kerbside NSW")
+            .accessibilityIdentifier("about")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .entering(0)
@@ -324,41 +334,19 @@ struct ParkedView: View {
             .accessibilityIdentifier("car-photo")
             .accessibilityLabel("Photograph of your parked car")
         } else if cameraAvailable {
-            Button { isTakingPhoto = true } label: { photoInvitation }
-                .kerbPressable()
-                .accessibilityIdentifier("take-photo")
+            Button { isTakingPhoto = true } label: {
+                PhotoInvitation(cameraAvailable: true)
+            }
+            .kerbPressable()
+            .accessibilityIdentifier("take-photo")
         } else {
             // No camera here — a simulator, or a device without one. A picture
             // already in the library answers the same question.
             PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                photoInvitation
+                PhotoInvitation(cameraAvailable: false)
             }
             .accessibilityIdentifier("take-photo")
         }
-    }
-
-    /// An offer, not an instruction.
-    ///
-    /// This was drawn in amber with the section's brightest text, which made
-    /// the optional extra louder than the row that walks you back to the car.
-    /// The accent is the app's own reading of something — a time, a bearing —
-    /// and an invitation to add a photograph is neither.
-    private var photoInvitation: some View {
-        HStack(spacing: 12) {
-            Image(systemName: cameraAvailable ? "camera" : "photo.on.rectangle")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(Kerb.chalkDim)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(cameraAvailable ? "Photograph the car" : "Add a photo of the car")
-                    .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
-                Text("The quickest way to find it again.")
-                    .kerbCaption(Kerb.chalkFaint, style: .footnote)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(15)
-        .frame(maxWidth: .infinity)
-        .kerbCard(.quiet, dashed: true)
     }
 
     // MARK: - The sign, if there is one
@@ -516,6 +504,32 @@ struct ParkedView: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .kerbCard(.quiet)
+    }
+}
+
+/// An offer, not an instruction.
+///
+/// Kept as a value-type label so PhotosPicker's sendable label closure captures
+/// no main-actor state from the parked screen.
+private struct PhotoInvitation: View {
+    let cameraAvailable: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: cameraAvailable ? "camera" : "photo.on.rectangle")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(Kerb.chalkDim)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(cameraAvailable ? "Photograph the car" : "Add a photo of the car")
+                    .kerbCaption(Kerb.chalkDim, style: .subheadline, weight: .medium)
+                Text("The quickest way to find it again.")
+                    .kerbCaption(Kerb.chalkFaint, style: .footnote)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(15)
+        .frame(maxWidth: .infinity)
+        .kerbCard(.quiet, dashed: true)
     }
 }
 

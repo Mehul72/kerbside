@@ -18,6 +18,8 @@ packages:
 # so both carry the same group and both compile the same Shared sources.
 settings:
   base:
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: MACDPWQG37
     SWIFT_VERSION: "6.0"
     TARGETED_DEVICE_FAMILY: "1"
     MARKETING_VERSION: "1.0"
@@ -52,9 +54,13 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: Kerbside
+        CFBundleDisplayName: Kerbside NSW
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Kerbside uses only Apple's system encryption. Keeping this in the
+        # binary prevents App Store Connect asking the same export compliance
+        # question for every build.
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -78,6 +84,9 @@ targets:
         PRODUCT_NAME: Kerbside
         PRODUCT_BUNDLE_IDENTIFIER: au.kerbside.Kerbside
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # XcodeGen otherwise supplies its iOS default of iPhone + iPad at the
+        # target level, overriding the project-wide iPhone-only setting.
+        TARGETED_DEVICE_FAMILY: "1"
     scheme:
       testTargets:
         - KerbsideUITests
@@ -102,6 +111,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: au.kerbside.Kerbside.UITests
         TEST_TARGET_NAME: Kerbside
         GENERATE_INFOPLIST_FILE: true
+        TARGETED_DEVICE_FAMILY: "1"
 
   KerbsideWidgets:
     type: app-extension
@@ -120,7 +130,7 @@ targets:
     info:
       path: Widgets/Info.plist
       properties:
-        CFBundleDisplayName: Kerbside
+        CFBundleDisplayName: Kerbside NSW
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
@@ -130,3 +140,4 @@ targets:
         PRODUCT_NAME: KerbsideWidgets
         PRODUCT_BUNDLE_IDENTIFIER: au.kerbside.Kerbside.Widgets
         SKIP_INSTALL: true
+        TARGETED_DEVICE_FAMILY: "1"

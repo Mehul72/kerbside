@@ -7,6 +7,7 @@ import XCTest
 /// back, that a limit chosen off a sign reaches the countdown, and that a
 /// collected car leaves the screen — the seams between the packages and the
 /// interface.
+@MainActor
 final class ParkingFlowTests: XCTestCase {
 
     private var app: XCUIApplication!
@@ -158,6 +159,32 @@ final class IntroductionTests: XCTestCase {
         XCTAssertTrue(
             app.buttons["park"].waitForExistence(timeout: 10),
             "starting should land on the home screen"
+        )
+    }
+}
+
+/// Privacy and support remain available after the one-time introduction.
+@MainActor
+final class AboutTests: XCTestCase {
+
+    func testPrivacyAndSupportAreReachableFromHome() {
+        let app = XCUIApplication()
+        app.terminate()
+        app.launchArguments = ["-kerbside-reset"]
+        app.launch()
+
+        let about = app.buttons["about"]
+        XCTAssertTrue(about.waitForExistence(timeout: 10))
+        about.tap()
+
+        let privacy = app.descendants(matching: .any)["privacy-policy"]
+        let support = app.descendants(matching: .any)["support"]
+        XCTAssertTrue(privacy.waitForExistence(timeout: 5))
+        XCTAssertTrue(support.exists)
+        XCTAssertTrue(
+            app.staticTexts.containing(
+                NSPredicate(format: "label CONTAINS[c] %@", "only authority")
+            ).firstMatch.exists
         )
     }
 }

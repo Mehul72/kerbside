@@ -1,6 +1,12 @@
-# Kerbside privacy policy
+---
+layout: default
+title: Privacy policy
+permalink: /privacy/
+---
 
-_Last updated 16 August 2026._
+# Kerbside NSW privacy policy
+
+_Last updated 21 August 2026._
 
 Kerbside does not collect anything.
 
@@ -54,6 +60,13 @@ Kerbside collects no data from anyone, including children.
 
 If this policy ever changes, the updated version will be published here.
 
+## Your choices and deletion
+
+You can deny or revoke location, camera, photo-library, or notification access
+at any time in iOS Settings. You can clear past spots inside Kerbside NSW.
+Deleting the app deletes the active spot, history, saved photographs, and
+preferences held in its app container.
+
 ## Contact
 
-mehulfursule@gmail.com
+[Email Kerbside NSW support](mailto:mehulfursule@gmail.com)

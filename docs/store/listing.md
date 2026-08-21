@@ -4,13 +4,13 @@ Copy for App Store Connect, plus the answers that submission asks for.
 
 ## Name
 
-Kerbside
+Kerbside NSW
 
 ## Subtitle (30 characters)
 
 `Where you parked, and until when` is 32. Use:
 
-    Where you parked, and till when
+    Where you parked, till when
 
 ## Promotional text (170)
 
@@ -64,6 +64,24 @@ Kerbside
 Primary: Navigation
 Secondary: Utilities
 
+## Bundle ID and signing
+
+    App Store app: au.kerbside.Kerbside
+    Widget extension: au.kerbside.Kerbside.Widgets
+    App Group: group.au.kerbside
+    Team: MACDPWQG37 (Mehul Fursule, Individual)
+
+The App Store record uses the app identifier, not the widget identifier.
+
+## Price and availability
+
+    Price: Free
+    Countries or regions: Australia only
+
+## Copyright
+
+    2026 Mehul Fursule
+
 ## Age rating
 
 4+
@@ -109,10 +127,13 @@ Paste into App Review Information → Notes:
 
 ## Privacy policy URL
 
-Host `docs/store/privacy-policy.md` as a page and put the URL here. A GitHub
-Pages site or a gist rendered page is enough.
+    https://mehul72.github.io/kerbside/privacy/
+
+## Support URL
+
+    https://mehul72.github.io/kerbside/support/
 
 ## Export compliance
 
-Uses no encryption beyond what Apple provides. Answer "No" to the encryption
-question, or set `ITSAppUsesNonExemptEncryption` to `false`.
+Uses no encryption beyond what Apple provides. `ITSAppUsesNonExemptEncryption`
+is set to `false` in the submitted binary.

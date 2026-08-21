@@ -6,6 +6,7 @@ import XCTest
 /// system, not to Kerbside — so what this checks is that starting an activity
 /// does not fail and that the app survives being sent away and brought back
 /// with one running.
+@MainActor
 final class LiveSurfaceTests: XCTestCase {
 
     private var app: XCUIApplication!

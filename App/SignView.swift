@@ -56,7 +56,7 @@ struct SignView: View {
             }
             .ignoresSafeArea()
         }
-        .onChange(of: selectedPhoto) { item in
+        .onChange(of: selectedPhoto) { _, item in
             guard let item else { return }
             selectedPhoto = nil
             model.read(item)

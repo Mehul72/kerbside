@@ -69,7 +69,8 @@ final class ExpiryAlarmTests: XCTestCase {
 
     func testTheAlarmIsOptInAndRemembered() {
         let app = XCUIApplication()
-        app.launchArguments += ["-kerbside-reset", "YES"]
+        app.terminate()
+        app.launchArguments = ["-kerbside-reset"]
         app.launch()
 
         app.buttons["park"].tap()
