@@ -137,7 +137,9 @@ enum PlateTone {
         switch restriction {
         case .timeLimited:
             self = .permissive
-        case .noParking, .noStopping:
+        // A zone plate is red on the street, and it forbids an ordinary car
+        // the same way, so it is painted the same.
+        case .noParking, .noStopping, .zone:
             self = .prohibitive
         }
     }

@@ -1,0 +1,34 @@
+{
+  "panels" : [
+    {
+      "panel" : {
+        "qualifiers" : [
+
+        ],
+        "days" : {
+          "publicHolidays" : true,
+          "weekdays" : [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ]
+        },
+        "restriction" : {
+          "zone" : "bus"
+        },
+        "direction" : "both",
+        "times" : [
+          {
+            "end" : "24:00",
+            "start" : "00:00"
+          }
+        ],
+        "rawText" : "BUS ZONE\n↔"
+      }
+    }
+  ]
+}

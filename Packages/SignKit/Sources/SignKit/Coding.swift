@@ -134,6 +134,12 @@ extension Restriction: Codable {
         }
         switch key.stringValue {
         case "timeLimited": self = .timeLimited(minutes: try container.decode(Int.self, forKey: key))
+        case "zone":
+            let name = try container.decode(String.self, forKey: key)
+            guard let zone = Zone(rawValue: name) else {
+                throw decodingError(decoder, "unknown zone \"\(name)\"")
+            }
+            self = .zone(zone)
         default: throw decodingError(decoder, "unknown restriction \"\(key.stringValue)\"")
         }
     }
@@ -146,6 +152,9 @@ extension Restriction: Codable {
         case .timeLimited(let minutes):
             var container = encoder.container(keyedBy: SingleKey.self)
             try container.encode(minutes, forKey: SingleKey("timeLimited"))
+        case .zone(let zone):
+            var container = encoder.container(keyedBy: SingleKey.self)
+            try container.encode(zone.rawValue, forKey: SingleKey("zone"))
         }
     }
 }

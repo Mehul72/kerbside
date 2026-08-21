@@ -1,0 +1,12 @@
+{
+  "panels" : [
+    {
+      "unknown" : {
+        "rawText" : "SPACESHIP ZONE",
+        "reason" : {
+          "unrecognisedLine" : "SPACESHIP ZONE"
+        }
+      }
+    }
+  ]
+}

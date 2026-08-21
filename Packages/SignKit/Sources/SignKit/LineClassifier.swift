@@ -2,7 +2,7 @@ import Foundation
 
 /// What one line of a panel turned out to be.
 enum LineToken: Hashable {
-    case restriction(Restriction)
+    case restriction(Restriction, qualifiers: [Qualifier])
     /// One line may name several windows, as `6AM - 10AM & 3PM - 6PM` does.
     case timeRanges([TimeRange])
     case daySet(DaySet)
@@ -34,8 +34,12 @@ enum LineClassifier {
         let text = remainder.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
         guard !text.isEmpty else { return (directions, nil) }
 
-        if let restriction = parseRestriction(text) {
-            return (directions, .restriction(restriction))
+        // "2P TICKET" and "1P METER" put the allowance and how it is paid for
+        // on one line, so a trailing qualifier is peeled off before the rest is
+        // read as a restriction.
+        let (core, peeled) = peelQualifiers(from: text)
+        if !core.isEmpty, let restriction = parseRestriction(core) {
+            return (directions, .restriction(restriction, qualifiers: peeled))
         }
         switch parseTimeRange(text) {
         case .ranges(let ranges): return (directions, .timeRanges(ranges))
@@ -51,6 +55,22 @@ enum LineClassifier {
         return (directions, .unrecognised(text))
     }
 
+    /// Splits trailing qualifier words off a line, leaving what comes before.
+    ///
+    /// Only from the end, and only words that are qualifiers on their own. A
+    /// qualifier in the middle of a line would mean the line is something this
+    /// parser does not know, and guessing at it is what the invariants forbid.
+    static func peelQualifiers(from text: String) -> (core: String, qualifiers: [Qualifier]) {
+        var words = text.split(separator: " ").map(String.init)
+        var found: [Qualifier] = []
+
+        while let last = words.last, let qualifier = parseQualifier(last) {
+            found.insert(qualifier, at: 0)
+            words.removeLast()
+        }
+        return (words.joined(separator: " "), found)
+    }
+
     // MARK: restrictions
 
     static func parseRestriction(_ text: String) -> Restriction? {
@@ -58,6 +78,13 @@ enum LineClassifier {
         case "NO STOPPING": return .noStopping
         case "NO PARKING": return .noParking
         default: break
+        }
+
+        // "LOADING ZONE", "BUS ZONE". A zone this parser does not know stays
+        // unread rather than being folded into one it does.
+        if text.hasSuffix(" ZONE") {
+            let name = String(text.dropLast(" ZONE".count)).lowercased()
+            return Zone(rawValue: name).map(Restriction.zone)
         }
 
         let words = text.split(separator: " ").map(String.init)
@@ -240,6 +267,14 @@ enum LineClassifier {
         if compact == "NOON" || compact == "MIDDAY" {
             return Clock(minutesIntoHalfDay: 0, meridiem: nil, fixed: 720)
         }
+        // NSW writes the end of a morning window as "12 NOON", which names the
+        // hour and the marker together.
+        if compact == "12NOON" || compact == "12MIDDAY" {
+            return Clock(minutesIntoHalfDay: 0, meridiem: nil, fixed: 720)
+        }
+        if compact == "12MIDNIGHT" {
+            return Clock(minutesIntoHalfDay: 0, meridiem: nil, fixed: isEnd ? 1440 : 0)
+        }
 
         var meridiem: Meridiem?
         var body = compact
@@ -303,7 +338,8 @@ enum LineClassifier {
     ]
 
     static func parseDaySet(_ text: String) -> DaySet? {
-        if text == "ALL DAYS" || text == "EVERY DAY" || text == "EVERYDAY" || text == "ANY DAY" {
+        if text == "ALL DAYS" || text == "EVERY DAY" || text == "EVERYDAY" || text == "ANY DAY"
+            || text == "7 DAYS" || text == "7DAYS" || text == "SEVEN DAYS" {
             return .allDays
         }
 

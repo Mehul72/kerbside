@@ -1,0 +1,34 @@
+{
+  "panels" : [
+    {
+      "panel" : {
+        "restriction" : {
+          "zone" : "coach"
+        },
+        "qualifiers" : [
+
+        ],
+        "direction" : "unspecified",
+        "rawText" : "COACH ZONE",
+        "times" : [
+          {
+            "start" : "00:00",
+            "end" : "24:00"
+          }
+        ],
+        "days" : {
+          "publicHolidays" : true,
+          "weekdays" : [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ]
+        }
+      }
+    }
+  ]
+}

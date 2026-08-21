@@ -107,13 +107,40 @@ public struct TimeWindows: Hashable, Sendable {
     }
 }
 
-/// What a panel restricts. Zone types such as loading and bus zones are not in
-/// this set yet, so a panel carrying one fails to parse rather than being
-/// approximated by a neighbouring case.
+/// A stretch of kerb set aside for one kind of vehicle or one purpose.
+///
+/// A closed set, like `Restriction` itself. A zone Kerbside does not know is
+/// left unread rather than folded into a neighbouring one: a mail zone is not
+/// a loading zone, and a reader who was told it was would be misled about who
+/// may stop there.
+public enum Zone: String, Hashable, Sendable, CaseIterable {
+    case loading
+    case bus
+    case taxi
+    case works
+    case mail
+    case coach
+    case truck
+
+    /// What NSW paints on the plate.
+    public var painted: String {
+        "\(rawValue.uppercased()) ZONE"
+    }
+}
+
+/// What a panel restricts.
+///
+/// A closed set on purpose. A panel carrying something not in it fails to parse
+/// rather than being approximated by a neighbouring case.
 public enum Restriction: Hashable, Sendable {
     case timeLimited(minutes: Int)
     case noParking
     case noStopping
+
+    /// Kerb given over to buses, taxis, loading and the like. Prohibitive for
+    /// an ordinary car, but not the same prohibition as no stopping, so it
+    /// keeps its own case and its own words.
+    case zone(Zone)
 }
 
 /// Which stretch of kerb a panel governs, relative to the pole.

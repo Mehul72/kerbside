@@ -1,7 +1,33 @@
 {
- "note": "Official NSW artwork, public domain. A TAXI ZONE plate with one arrow pointing both. The zone type itself is not parsed yet, so the panel is expected as an unknown; what this fixture pins is that the arrow is still found and read.",
- "panels": [],
- "unknownCount": 1,
+ "note": "Official NSW artwork, public domain. A TAXI ZONE plate with one arrow pointing both. No days and no hours, so it applies every day at all times.",
+ "panels": [
+  {
+   "restriction": {
+    "zone": "taxi"
+   },
+   "days": {
+    "weekdays": [
+     "mon",
+     "tue",
+     "wed",
+     "thu",
+     "fri",
+     "sat",
+     "sun"
+    ],
+    "publicHolidays": true
+   },
+   "times": [
+    {
+     "start": "00:00",
+     "end": "24:00"
+    }
+   ],
+   "direction": "both",
+   "qualifiers": []
+  }
+ ],
+ "unknownCount": 0,
  "arrows": [
   "bidirectional"
  ]

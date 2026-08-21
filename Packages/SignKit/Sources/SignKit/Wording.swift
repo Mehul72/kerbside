@@ -27,6 +27,8 @@ public enum Wording {
             return "No stopping"
         case .timeLimited(let minutes):
             return "\(duration(minutes)) parking"
+        case .zone(let zone):
+            return "\(zone.rawValue.capitalisedFirst) zone"
         }
     }
 
@@ -140,5 +142,14 @@ public enum Wording {
         case .conflictingDaySets:
             "This panel named more than one set of days."
         }
+    }
+}
+
+extension String {
+    /// Sentence case, for a value spelled in lower case because it is normally
+    /// used mid-sentence.
+    var capitalisedFirst: String {
+        guard let first else { return self }
+        return first.uppercased() + dropFirst()
     }
 }

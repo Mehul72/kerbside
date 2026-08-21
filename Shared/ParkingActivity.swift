@@ -17,7 +17,7 @@ enum PlateInk: String, Codable, Hashable, Sendable {
     init(_ restriction: Restriction) {
         switch restriction {
         case .timeLimited: self = .green
-        case .noParking, .noStopping: self = .red
+        case .noParking, .noStopping, .zone: self = .red
         }
     }
 

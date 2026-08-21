@@ -1,0 +1,10 @@
+{
+  "panels" : [
+    {
+      "unknown" : {
+        "reason" : "conflictingDaySets",
+        "rawText" : "2P\n9.30AM - 3.30PM\nMON - FRI\n9AM - 12 NOON\nSAT\n←"
+      }
+    }
+  ]
+}

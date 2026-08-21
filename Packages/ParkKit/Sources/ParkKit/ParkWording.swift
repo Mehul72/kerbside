@@ -129,6 +129,10 @@ public enum ParkWording {
             "NO STOPPING"
         case .timeLimited(let minutes):
             allowanceBadge(minutes)
+        case .zone(let zone):
+            // A zone plate paints its own name and nothing shorter, so the
+            // badge is that name rather than an abbreviation nobody uses.
+            zone.painted
         }
     }
 

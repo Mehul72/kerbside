@@ -1,0 +1,34 @@
+{
+  "panels" : [
+    {
+      "panel" : {
+        "direction" : "left",
+        "times" : [
+          {
+            "start" : "07:00",
+            "end" : "19:00"
+          }
+        ],
+        "days" : {
+          "publicHolidays" : true,
+          "weekdays" : [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ]
+        },
+        "qualifiers" : [
+
+        ],
+        "rawText" : "3P\n7AM - 7PM\n7 DAYS\n←",
+        "restriction" : {
+          "timeLimited" : 180
+        }
+      }
+    }
+  ]
+}

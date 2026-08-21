@@ -4,28 +4,30 @@
       "panel" : {
         "times" : [
           {
-            "start" : "08:00",
-            "end" : "18:00"
+            "end" : "24:00",
+            "start" : "00:00"
           }
         ],
         "restriction" : {
-          "zone" : "loading"
+          "zone" : "mail"
         },
+        "direction" : "unspecified",
         "qualifiers" : [
 
         ],
-        "rawText" : "LOADING ZONE\n8AM - 6PM\nMON - FRI",
+        "rawText" : "MAIL ZONE",
         "days" : {
           "weekdays" : [
             "mon",
             "tue",
             "wed",
             "thu",
-            "fri"
+            "fri",
+            "sat",
+            "sun"
           ],
-          "publicHolidays" : false
-        },
-        "direction" : "unspecified"
+          "publicHolidays" : true
+        }
       }
     }
   ]

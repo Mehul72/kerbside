@@ -1,0 +1,34 @@
+{
+  "panels" : [
+    {
+      "panel" : {
+        "direction" : "left",
+        "restriction" : {
+          "zone" : "works"
+        },
+        "days" : {
+          "weekdays" : [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "publicHolidays" : true
+        },
+        "times" : [
+          {
+            "end" : "24:00",
+            "start" : "00:00"
+          }
+        ],
+        "rawText" : "WORKS ZONE\n←",
+        "qualifiers" : [
+
+        ]
+      }
+    }
+  ]
+}

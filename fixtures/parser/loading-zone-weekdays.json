@@ -2,30 +2,30 @@
   "panels" : [
     {
       "panel" : {
-        "times" : [
-          {
-            "start" : "08:00",
-            "end" : "18:00"
-          }
-        ],
         "restriction" : {
           "zone" : "loading"
         },
-        "qualifiers" : [
-
+        "times" : [
+          {
+            "end" : "15:30",
+            "start" : "09:00"
+          }
         ],
-        "rawText" : "LOADING ZONE\n8AM - 6PM\nMON - FRI",
+        "direction" : "left",
         "days" : {
+          "publicHolidays" : false,
           "weekdays" : [
             "mon",
             "tue",
             "wed",
             "thu",
             "fri"
-          ],
-          "publicHolidays" : false
+          ]
         },
-        "direction" : "unspecified"
+        "qualifiers" : [
+
+        ],
+        "rawText" : "LOADING ZONE\n9AM - 3.30PM\nMON - FRI\n←"
       }
     }
   ]

@@ -1,0 +1,32 @@
+{
+  "panels" : [
+    {
+      "panel" : {
+        "direction" : "right",
+        "rawText" : "2P TICKET\n9AM - 5.30PM\nMON - FRI\n→",
+        "restriction" : {
+          "timeLimited" : 120
+        },
+        "days" : {
+          "publicHolidays" : false,
+          "weekdays" : [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ]
+        },
+        "qualifiers" : [
+          "ticket"
+        ],
+        "times" : [
+          {
+            "start" : "09:00",
+            "end" : "17:30"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -30,8 +30,9 @@ public enum Parser {
             switch token {
             case .none:
                 continue
-            case .restriction(let restriction):
+            case .restriction(let restriction, let lineQualifiers):
                 restrictions.append(restriction)
+                qualifiers.append(contentsOf: lineQualifiers)
             case .timeRanges(let ranges):
                 timeRanges.append(contentsOf: ranges)
             case .daySet(let days):

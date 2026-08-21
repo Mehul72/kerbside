@@ -395,9 +395,12 @@ struct PanelSegmenterTests {
 
     @Test("assembled blocks are parsed independently and never dropped")
     func assembly() {
+        // The second block stands in for a panel nothing can read. It used to
+        // be a loading zone, which the parser now understands — a fine thing,
+        // but it stopped this test checking what it is for.
         let blocks = [
             block("NO STOPPING", y: 0.8),
-            block("LOADING ZONE", y: 0.5),
+            block("QZX WRRBL", y: 0.5),
         ]
 
         let sign = SignVision.assemble(blocks)
@@ -405,7 +408,7 @@ struct PanelSegmenterTests {
         #expect(SignVision.pipelineVersion == 5)
         #expect(sign.parsedPanels.count == 1)
         #expect(sign.unknowns.count == 1)
-        #expect(sign.unknowns.first?.rawText == "LOADING ZONE")
+        #expect(sign.unknowns.first?.rawText == "QZX WRRBL")
     }
 
     @Test("fragmented plate OCR is repaired without changing raw evidence")

@@ -1,0 +1,28 @@
+{
+  "panels" : [
+    {
+      "panel" : {
+        "rawText" : "1P\n9AM - 12 NOON\nSAT\n←",
+        "qualifiers" : [
+
+        ],
+        "days" : {
+          "publicHolidays" : false,
+          "weekdays" : [
+            "sat"
+          ]
+        },
+        "times" : [
+          {
+            "end" : "12:00",
+            "start" : "09:00"
+          }
+        ],
+        "restriction" : {
+          "timeLimited" : 60
+        },
+        "direction" : "left"
+      }
+    }
+  ]
+}
